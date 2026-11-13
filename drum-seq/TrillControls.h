@@ -23,6 +23,16 @@ constexpr float kChaosMax = 0.35f;
 constexpr int kReleaseHoldMs = 30;
 constexpr unsigned kReadIntervalUs = 5000;
 
+constexpr uint8_t kBarAddress = 0x20;
+constexpr uint8_t kSquareAddress = 0x28;
+constexpr float kSquareSizeMin = 0.05f;
+constexpr float kSquareEdgeMin = 0.06f;
+constexpr float kSquareEdgeMax = 0.94f;
+constexpr bool kSquareInvertX = false;
+constexpr bool kSquareInvertY = true;
+constexpr float kSquareSlewMs = 120.f;
+constexpr float kPotTakeoverDelta = 0.06f;
+
 } // namespace TrillCfg
 
 struct TrillFillState {
@@ -32,17 +42,29 @@ struct TrillFillState {
 	bool kickDrop = false;
 };
 
+struct TrillPadState {
+	bool present = false;
+	bool touching = false;
+	float x = 0.f;
+	float y = 0.f;
+};
+
 class TrillControls {
 public:
 	bool setup();
 	void poll(BelaContext* context);
 
 	TrillFillState fillState() const { return mFill; }
-	bool hardwarePresent() const { return mPresent; }
+	TrillPadState padState() const { return mPad; }
+	bool barPresent() const { return mBarPresent; }
+	bool squarePresent() const { return mSquarePresent; }
+	bool hardwarePresent() const { return mBarPresent || mSquarePresent; }
 
 private:
-	bool mPresent = false;
+	bool mBarPresent = false;
+	bool mSquarePresent = false;
 	TrillFillState mFill;
+	TrillPadState mPad;
 	int mRateZone = 2;
 	bool mKickDrop = false;
 	int mReleaseFramesLeft = 0;
@@ -51,4 +73,7 @@ private:
 	int hitsForZone(int zone) const;
 	int zoneFromPosition(float pos, int prevZone) const;
 	float normalizeIntensity(float sizeRaw) const;
+	float mapSquareAxis(float raw, bool invert) const;
+	void pollBar(BelaContext* context);
+	void pollSquare();
 };

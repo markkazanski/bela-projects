@@ -6,6 +6,7 @@
 #include "Controls.h"
 #include "FillEngine.h"
 #include "PatternEngine.h"
+#include "PatternPosition.h"
 #include "PepperIO.h"
 #include "TrillControls.h"
 #include "TriggerOut.h"
@@ -16,6 +17,7 @@ static PatternEngine gEngine;
 static TriggerOut gTriggers;
 static TrillControls gTrill;
 static FillEngine gFill;
+static PatternPosition gPatternPos;
 static bool gTrillPolledThisBlock = false;
 
 static int gLedFlash[PepperIO::kNumDrums] = {};
@@ -114,15 +116,17 @@ void render(BelaContext* context, void* userData) {
 		const unsigned int aFrame = doAnalog ? (n / anaRatio) : 0;
 
 		if (doAnalog) {
+			gControls.processAnalog(context, aFrame);
+
 			if (!gTrillPolledThisBlock) {
 				gTrill.poll(context);
 				const TrillFillState fs = gTrill.fillState();
 				gEngine.setFillState(fs.active, fs.kickDrop);
 				gFill.setTrillState(fs);
+				gPatternPos.update(gTrill.padState(), gControls.patternX(),
+					gControls.patternY(), context);
 				gTrillPolledThisBlock = true;
 			}
-
-			gControls.processAnalog(context, aFrame);
 			gClock.processAnalog(context, aFrame);
 
 			gTriggers.setStepPeriodFrames(gClock.stepPeriodFrames());
@@ -131,7 +135,7 @@ void render(BelaContext* context, void* userData) {
 				gEngine.setDensity(d, gControls.density(d));
 				gFill.setButtonHeld(d, gControls.rollHeld(d));
 			}
-			gEngine.setPatternPosition(gControls.patternX(), gControls.patternY());
+			gEngine.setPatternPosition(gPatternPos.x(), gPatternPos.y());
 			if (!gClock.externalActive())
 				gClock.setTempoBpm(gControls.tempoBpm());
 			gClock.setFeelSwing(gControls.feel());
@@ -162,6 +166,7 @@ void render(BelaContext* context, void* userData) {
 		const TrillFillState trillLed = gTrill.fillState();
 		gControls.setLedState(6, trillLed.active);
 		gControls.setLedState(7, trillLed.kickDrop);
+		gControls.setLedState(8, gPatternPos.squareIsSource());
 		gControls.applyLeds(context, n);
 #endif
 	}
