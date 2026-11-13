@@ -34,8 +34,6 @@ void FillEngine::onDeactivate(unsigned int drum) {
 	mLastHits[drum] = -1;
 	mWaitingNextGrid[drum] = false;
 	mRollProgress[drum] = 0.f;
-	if (drum == PepperIO::kSnare)
-		mSnareHitCount = 0;
 }
 
 bool FillEngine::drumActive(unsigned int drum) const {
@@ -56,9 +54,21 @@ int FillEngine::hitsPerBeatForDrum(unsigned int drum) const {
 bool FillEngine::shouldPlayHatGrid(int idx) const {
 	if (!mTrill.active)
 		return true;
-	if (mTrill.intensity > 0.5f)
-		return true;
 	return (idx % 2) == 0;
+}
+
+bool FillEngine::shouldPlaySnareGrid(int idx) const {
+	if (!mTrill.active)
+		return true;
+	return (idx % 2) == 1;
+}
+
+static int lastOddSlot(int hits) {
+	if (hits <= 1)
+		return 1;
+	if ((hits % 2) == 0)
+		return hits - 1;
+	return std::max(1, hits - 2);
 }
 
 bool FillEngine::chaosSkip(unsigned int drum) const {
@@ -70,9 +80,13 @@ bool FillEngine::chaosSkip(unsigned int drum) const {
 	return ((float)rand() / (float)RAND_MAX) < p;
 }
 
-float FillEngine::snareAccent() const {
-	const float base = 0.3f + 0.4f * mTrill.intensity;
-	return std::min(1.f, base + mSnareHitCount * 0.08f);
+float FillEngine::snareAccent(int idx, int hits) const {
+	if (idx == lastOddSlot(hits))
+		return std::min(1.f, 0.65f + 0.35f * mTrill.intensity);
+	float ghost = 0.12f + 0.15f * mTrill.intensity;
+	const float jitter = 0.1f * mTrill.intensity;
+	return std::max(0.f, std::min(1.f,
+		ghost + jitter * (((float)rand() / RAND_MAX) - 0.5f)));
 }
 
 float FillEngine::hatAccent() const {
@@ -92,10 +106,7 @@ void FillEngine::tryFire(unsigned int drum, int idx, float beatPhase, int hits,
 	float accent = 0.7f;
 	const bool trillLane = trillControlsSnareHat(drum, mTrill.active);
 	if (trillLane && drum == PepperIO::kSnare) {
-		accent = snareAccent();
-		mSnareHitCount++;
-		const float jitter = 0.1f * mTrill.intensity;
-		accent = std::max(0.f, std::min(1.f, accent + jitter * (((float)rand() / RAND_MAX) - 0.5f)));
+		accent = snareAccent(idx, hits);
 	} else if (trillLane && drum == PepperIO::kHat) {
 		accent = hatAccent();
 		triggers.setHatDecayNow(0.f);
@@ -141,7 +152,6 @@ void FillEngine::process(float beatPhase, TriggerOut& triggers, int* ledFlashFra
 				mWaitingNextGrid[d] = true;
 			}
 		}
-		mSnareHitCount = 0;
 		const int h = std::max(1, mTrill.hitsPerBeat);
 		mLastHits[PepperIO::kSnare] = h;
 		mLastHits[PepperIO::kHat] = h;
@@ -150,7 +160,8 @@ void FillEngine::process(float beatPhase, TriggerOut& triggers, int* ledFlashFra
 		if (frac < 0.1f) {
 			if (shouldPlayHatGrid(idx0))
 				tryFire(PepperIO::kHat, idx0, beatPhase, h, triggers, ledFlashFrames);
-			tryFire(PepperIO::kSnare, idx0, beatPhase, h, triggers, ledFlashFrames);
+			if (shouldPlaySnareGrid(idx0))
+				tryFire(PepperIO::kSnare, idx0, beatPhase, h, triggers, ledFlashFrames);
 			mWaitingNextGrid[PepperIO::kSnare] = false;
 			mWaitingNextGrid[PepperIO::kHat] = false;
 			mLastIdx[PepperIO::kSnare] = idx0;
@@ -182,6 +193,10 @@ void FillEngine::process(float beatPhase, TriggerOut& triggers, int* ledFlashFra
 					mLastIdx[d] = idx;
 					continue;
 				}
+				if (d == PepperIO::kSnare && !shouldPlaySnareGrid(idx)) {
+					mLastIdx[d] = idx;
+					continue;
+				}
 				tryFire(d, idx, beatPhase, hits, triggers, ledFlashFrames);
 				mLastIdx[d] = idx;
 				mWaitingNextGrid[d] = false;
@@ -191,6 +206,10 @@ void FillEngine::process(float beatPhase, TriggerOut& triggers, int* ledFlashFra
 
 		if (idx != mLastIdx[d]) {
 			if (d == PepperIO::kHat && !shouldPlayHatGrid(idx)) {
+				mLastIdx[d] = idx;
+				continue;
+			}
+			if (d == PepperIO::kSnare && !shouldPlaySnareGrid(idx)) {
 				mLastIdx[d] = idx;
 				continue;
 			}

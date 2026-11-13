@@ -16,7 +16,6 @@ private:
 	bool mButtonHeld[PepperIO::kNumDrums] = {};
 
 	bool mTrillWasActive = false;
-	int mSnareHitCount = 0;
 	int mLastIdx[PepperIO::kNumDrums] = {-1, -1, -1, -1};
 	int mLastHits[PepperIO::kNumDrums] = {-1, -1, -1, -1};
 	bool mWaitingNextGrid[PepperIO::kNumDrums] = {};
@@ -31,8 +30,9 @@ private:
 	void onDeactivate(unsigned int drum);
 	void tryFire(unsigned int drum, int idx, float beatPhase, int hits,
 		TriggerOut& triggers, int* ledFlashFrames);
-	float snareAccent() const;
+	float snareAccent(int idx, int hits) const;
 	float hatAccent() const;
 	bool shouldPlayHatGrid(int idx) const;
+	bool shouldPlaySnareGrid(int idx) const;
 	bool chaosSkip(unsigned int drum) const;
 };
