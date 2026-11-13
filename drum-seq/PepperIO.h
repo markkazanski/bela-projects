@@ -31,15 +31,16 @@ constexpr unsigned int kOutKickTrig = 0;
 constexpr unsigned int kOutSnareTrig = 1;
 constexpr unsigned int kOutHatTrig = 2;
 constexpr unsigned int kOutFmTrig = 3;
-constexpr unsigned int kOutSnareAccent = 4;
-constexpr unsigned int kOutHatAccent = 5;
-constexpr unsigned int kOutHatDecay = 6;
-constexpr unsigned int kOutFmAccent = 7;
+constexpr unsigned int kOutKickAccent = 4;
+constexpr unsigned int kOutSnareAccent = 5;
+constexpr unsigned int kOutHatAccent = 6;
+constexpr unsigned int kOutHatDecay = 7;
+constexpr unsigned int kNoOutput = 255;
 
 constexpr unsigned int kTriggerOutChannel[kNumDrums] = {
 	kOutKickTrig, kOutSnareTrig, kOutHatTrig, kOutFmTrig};
 constexpr unsigned int kAccentOutChannel[kNumDrums] = {
-	255, kOutSnareAccent, kOutHatAccent, kOutFmAccent}; // kick has no accent CV
+	kOutKickAccent, kOutSnareAccent, kOutHatAccent, kNoOutput}; // FM has no accent CV
 
 constexpr int kStepsPerBar = 16;
 constexpr int kMsBeforeTrigger = 1;
@@ -58,10 +59,8 @@ extern Calib gCalib;
 
 inline float voltsToNorm(float volts) { return volts / 5.0f; }
 
-inline float accentFromLevel(float level01, unsigned int drum) {
+inline float accentFromLevel(float level01, unsigned int /*drum*/) {
 	level01 = std::max(0.f, std::min(1.f, level01));
-	if (drum == kKick)
-		return 0.f;
 	return gCalib.accentMin + (gCalib.accentMax - gCalib.accentMin) * level01;
 }
 

@@ -20,7 +20,7 @@ void TriggerOut::resetOutputs(BelaContext* context, unsigned int frame) {
 
 void TriggerOut::setAccentNow(unsigned int drum, float level01) {
 	unsigned int ch = PepperIO::kAccentOutChannel[drum];
-	if (ch == 255)
+	if (ch == PepperIO::kNoOutput)
 		return;
 	mHeldAccent[drum] = PepperIO::accentFromLevel(level01, drum);
 }
@@ -62,7 +62,7 @@ void TriggerOut::process(BelaContext* context, unsigned int frame) {
 		analogWriteOnce(context, frame, PepperIO::kTriggerOutChannel[d], trig);
 
 		unsigned int accentCh = PepperIO::kAccentOutChannel[d];
-		if (accentCh != 255)
+		if (accentCh != PepperIO::kNoOutput)
 			analogWriteOnce(context, frame, accentCh, mHeldAccent[d]);
 	}
 	analogWriteOnce(context, frame, PepperIO::kOutHatDecay, mHeldHatDecay);

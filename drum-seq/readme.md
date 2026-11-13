@@ -25,7 +25,7 @@ Expect `20` and `28`. Reseat Hub cabling if either address is missing.
 ### Trill Bar (fills)
 
 - Touch anywhere on the bar to start a fill (snare + hi-hat ratchets). Touch position sets rate (left = slower, right = faster). Touch size sets intensity (chaos, hat density, accents). Above ~50% size mutes the kick until release.
-- Pepper buttons still roll their drum while held, using the same clock-synced grid (kick 2/beat, snare/hat 8/beat, FM 6/beat).
+- Pepper buttons still roll their drum while held, using the same clock-synced grid (kick 2/beat, snare 4/beat, hat 8/beat, FM 6/beat). While held, that drum’s accent CV sweeps from minimum to maximum over one bar; hi-hat decay (CV 8) opens over the same bar.
 - I2C reads run only on a Bela auxiliary task; `render` never calls I2C.
 
 **Bar touch-size calibration**
@@ -70,13 +70,28 @@ LED 8 = Square is the active pattern source (latched or being touched).
 Set `DRUM_SEQ_CALIBRATION_MODE` to `1` in `PepperIO.h` and rebuild. Outputs cycle every 0.5 s:
 
 1. Triggers on CV 1–4  
-2. Accent minimum on CV 5, 6, 8  
-3. Accent maximum on CV 5, 6, 8  
-4. Hat decay closed on CV 7  
-5. Hat decay open on CV 7  
+2. Accent minimum on CV 5, 6, 7  
+3. Accent maximum on CV 5, 6, 7  
+4. Hat decay closed on CV 8  
+5. Hat decay open on CV 8  
 
 Adjust `PepperIO::gCalib` in `PepperIO.cpp`, then set the mode back to `0`.
 
 ## Patching
 
-See the project plan for CV routing and panel controls.
+Analog outputs (panel CV jacks):
+
+| CV | Output | Signal |
+|----|--------|--------|
+| 1 | Kick trigger | Fixed pulse |
+| 2 | Snare trigger | Fixed pulse |
+| 3 | Hi-hat trigger | Fixed pulse |
+| 4 | FM trigger | Fixed pulse |
+| 5 | Kick accent | Held voltage (groove or button roll sweep) |
+| 6 | Snare accent | Held voltage |
+| 7 | Hi-hat accent | Held voltage |
+| 8 | Hi-hat decay | Held voltage (open/closed) |
+
+FM has no accent CV; re-patch CV 5 to the FM module if you want accent there instead of kick.
+
+Panel knobs and buttons: see project plan.

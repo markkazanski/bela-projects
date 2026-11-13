@@ -19,6 +19,11 @@ private:
 	int mSnareHitCount = 0;
 	int mLastIdx[PepperIO::kNumDrums] = {-1, -1, -1, -1};
 	bool mWaitingNextGrid[PepperIO::kNumDrums] = {};
+	float mRollProgress[PepperIO::kNumDrums] = {};
+	float mPrevBeatPhase = 0.f;
+	bool mBeatPhaseInit = false;
+
+	static constexpr float kRollSweepBeats = 4.f;
 
 	int hitsPerBeatForDrum(unsigned int drum) const;
 	bool drumActive(unsigned int drum) const;

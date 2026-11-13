@@ -3,7 +3,8 @@
 #include <cmath>
 #include <cstdlib>
 
-static constexpr int kButtonHitsPerBeat[PepperIO::kNumDrums] = {2, 8, 8, 6};
+// Kick, Snare, Hat, FM
+static constexpr int kButtonHitsPerBeat[PepperIO::kNumDrums] = {2, 4, 8, 6};
 
 void FillEngine::setTrillState(const TrillFillState& state) {
 	const bool was = mTrill.active;
@@ -21,6 +22,7 @@ void FillEngine::setButtonHeld(unsigned int drum, bool held) {
 	if (held && !mButtonHeld[drum]) {
 		mLastIdx[drum] = -1;
 		mWaitingNextGrid[drum] = true;
+		mRollProgress[drum] = 0.f;
 	}
 	if (mButtonHeld[drum] && !held)
 		onDeactivate(drum);
@@ -30,6 +32,7 @@ void FillEngine::setButtonHeld(unsigned int drum, bool held) {
 void FillEngine::onDeactivate(unsigned int drum) {
 	mLastIdx[drum] = -1;
 	mWaitingNextGrid[drum] = false;
+	mRollProgress[drum] = 0.f;
 	if (drum == PepperIO::kSnare)
 		mSnareHitCount = 0;
 }
@@ -67,16 +70,17 @@ bool FillEngine::chaosSkip(unsigned int drum) const {
 }
 
 float FillEngine::snareAccent() const {
-	if (!mTrill.active)
-		return std::min(1.f, 0.3f + mSnareHitCount * 0.1f);
 	const float base = 0.3f + 0.4f * mTrill.intensity;
 	return std::min(1.f, base + mSnareHitCount * 0.08f);
 }
 
 float FillEngine::hatAccent() const {
-	if (!mTrill.active)
-		return std::min(1.f, 0.4f + mSnareHitCount * 0.05f);
 	return std::min(1.f, 0.35f + 0.65f * mTrill.intensity);
+}
+
+static bool trillControlsSnareHat(unsigned int drum, bool trillActive) {
+	return trillActive
+		&& (drum == PepperIO::kSnare || drum == PepperIO::kHat);
 }
 
 void FillEngine::tryFire(unsigned int drum, int idx, float beatPhase, int hits,
@@ -85,19 +89,21 @@ void FillEngine::tryFire(unsigned int drum, int idx, float beatPhase, int hits,
 		return;
 
 	float accent = 0.7f;
-	if (drum == PepperIO::kSnare) {
+	const bool trillLane = trillControlsSnareHat(drum, mTrill.active);
+	if (trillLane && drum == PepperIO::kSnare) {
 		accent = snareAccent();
 		mSnareHitCount++;
-		const float jitter = mTrill.active ? (0.1f * mTrill.intensity) : 0.f;
+		const float jitter = 0.1f * mTrill.intensity;
 		accent = std::max(0.f, std::min(1.f, accent + jitter * (((float)rand() / RAND_MAX) - 0.5f)));
-	} else if (drum == PepperIO::kHat) {
+	} else if (trillLane && drum == PepperIO::kHat) {
 		accent = hatAccent();
-		if (mTrill.active)
-			triggers.setHatDecayNow(0.f);
-	} else if (drum == PepperIO::kFm) {
-		accent = std::min(1.f, 0.5f + mSnareHitCount * 0.07f);
+		triggers.setHatDecayNow(0.f);
+	} else if (mButtonHeld[drum]) {
+		accent = mRollProgress[drum];
+		if (drum == PepperIO::kHat)
+			triggers.setHatDecayNow(accent);
 	} else {
-		accent = 0.85f;
+		accent = 0.7f;
 	}
 
 	triggers.fireNow(drum, accent);
@@ -107,6 +113,24 @@ void FillEngine::tryFire(unsigned int drum, int idx, float beatPhase, int hits,
 
 void FillEngine::process(float beatPhase, TriggerOut& triggers, int* ledFlashFrames) {
 	beatPhase = std::max(0.f, std::min(0.9999f, beatPhase));
+
+	if (!mBeatPhaseInit) {
+		mPrevBeatPhase = beatPhase;
+		mBeatPhaseInit = true;
+	} else {
+		float delta = beatPhase - mPrevBeatPhase;
+		if (delta < -0.5f)
+			delta += 1.f;
+		if (delta > 0.f) {
+			for (unsigned d = 0; d < PepperIO::kNumDrums; ++d) {
+				if (!mButtonHeld[d])
+					continue;
+				mRollProgress[d] = std::min(1.f,
+					mRollProgress[d] + delta / kRollSweepBeats);
+			}
+		}
+		mPrevBeatPhase = beatPhase;
+	}
 
 	if (mTrill.active && !mTrillWasActive) {
 		mTrillWasActive = true;

@@ -44,16 +44,18 @@ static void runCalibration(BelaContext* context, unsigned int aFrame) {
 			PepperIO::gCalib.trigHigh;
 		break;
 	case 1:
-		gCalibOut[4] = gCalibOut[5] = gCalibOut[7] = PepperIO::gCalib.accentMin;
+		gCalibOut[PepperIO::kOutKickAccent] = gCalibOut[PepperIO::kOutSnareAccent] =
+			gCalibOut[PepperIO::kOutHatAccent] = PepperIO::gCalib.accentMin;
 		break;
 	case 2:
-		gCalibOut[4] = gCalibOut[5] = gCalibOut[7] = PepperIO::gCalib.accentMax;
+		gCalibOut[PepperIO::kOutKickAccent] = gCalibOut[PepperIO::kOutSnareAccent] =
+			gCalibOut[PepperIO::kOutHatAccent] = PepperIO::gCalib.accentMax;
 		break;
 	case 3:
-		gCalibOut[6] = PepperIO::gCalib.hatDecayClosed;
+		gCalibOut[PepperIO::kOutHatDecay] = PepperIO::gCalib.hatDecayClosed;
 		break;
 	case 4:
-		gCalibOut[6] = PepperIO::gCalib.hatDecayOpen;
+		gCalibOut[PepperIO::kOutHatDecay] = PepperIO::gCalib.hatDecayOpen;
 		break;
 	}
 	gCalibPhase++;
