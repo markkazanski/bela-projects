@@ -40,50 +40,12 @@ void TriggerOut::scheduleTriggerWithDelay(unsigned int drum, int extraDelayFrame
 	scheduleTrigger(drum, mPreTriggerFrames + extraDelayFrames, accentLevel01);
 }
 
-int TriggerOut::rollIntervalForDrum(unsigned int drum) const {
-	float step = mStepPeriodFrames;
-	switch (drum) {
-	case PepperIO::kHat:
-	case PepperIO::kSnare:
-		return (int)(step * 0.5f); // 32nd
-	case PepperIO::kFm:
-		return (int)(step * (2.f / 3.f)); // triplet 16th
-	case PepperIO::kKick:
-	default:
-		return (int)step; // 8th
-	}
-}
-
-void TriggerOut::startRoll(unsigned int drum) {
-	if (mRollActive[drum])
-		return;
-	mRollActive[drum] = true;
-	mRollCounter[drum] = 0;
-	mRollPhase[drum] = 0;
-}
-
-void TriggerOut::stopRoll(unsigned int drum) {
-	mRollActive[drum] = false;
+void TriggerOut::fireNow(unsigned int drum, float accentLevel01) {
+	scheduleTrigger(drum, mPreTriggerFrames, accentLevel01);
 }
 
 void TriggerOut::fireTrigger(unsigned int drum, unsigned int /*frame*/, BelaContext* /*context*/) {
 	mPulseRemaining[drum] = mPulseWidth;
-}
-
-void TriggerOut::processRoll(unsigned int drum, BelaContext* context, unsigned int frame) {
-	if (!mRollActive[drum])
-		return;
-	mRollCounter[drum]++;
-	int interval = std::max(1, rollIntervalForDrum(drum));
-	if (mRollCounter[drum] >= interval) {
-		mRollCounter[drum] = 0;
-		mRollPhase[drum]++;
-		float ramp = std::min(1.f, mRollPhase[drum] * 0.15f);
-		if (drum == PepperIO::kSnare)
-			ramp = std::min(1.f, 0.3f + mRollPhase[drum] * 0.1f);
-		setAccentNow(drum, ramp);
-		fireTrigger(drum, frame, context);
-	}
 }
 
 void TriggerOut::process(BelaContext* context, unsigned int frame) {
@@ -102,7 +64,6 @@ void TriggerOut::process(BelaContext* context, unsigned int frame) {
 		unsigned int accentCh = PepperIO::kAccentOutChannel[d];
 		if (accentCh != 255)
 			analogWriteOnce(context, frame, accentCh, mHeldAccent[d]);
-		processRoll(d, context, frame);
 	}
 	analogWriteOnce(context, frame, PepperIO::kOutHatDecay, mHeldHatDecay);
 }

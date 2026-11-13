@@ -11,6 +11,7 @@ public:
 	void setPatternPosition(float x, float y);
 	void setDensity(unsigned int drum, float d);
 	void setFeel(float feel01);
+	void setFillState(bool snareHatFill, bool kickDrop);
 
 	void onNewBar(int bar);
 	void onStep(int step, int bar, TriggerOut& triggers, float swingDelayFrames,
@@ -23,6 +24,8 @@ private:
 	float mPatternY = 0.f;
 	float mDensity[PepperIO::kNumDrums] = {0.7f, 0.7f, 0.7f, 0.5f};
 	float mFeel = 0.f;
+	bool mSnareHatFill = false;
+	bool mKickDrop = false;
 	int8_t mChaos[PepperIO::kNumDrums][PepperIO::kStepsPerBar] = {};
 
 	float laneValue(int gx, int gy, int lane, int step) const;

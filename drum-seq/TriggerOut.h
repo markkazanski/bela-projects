@@ -14,8 +14,7 @@ public:
 	void scheduleTriggerWithDelay(unsigned int drum, int extraDelayFrames,
 		float accentLevel01);
 
-	void startRoll(unsigned int drum);
-	void stopRoll(unsigned int drum);
+	void fireNow(unsigned int drum, float accentLevel01);
 	void setStepPeriodFrames(float period);
 	void process(BelaContext* context, unsigned int frame);
 
@@ -28,11 +27,6 @@ private:
 	int mPulseRemaining[PepperIO::kNumDrums] = {};
 	int mPendingDelay[PepperIO::kNumDrums] = {};
 	float mPendingAccent[PepperIO::kNumDrums] = {};
-	bool mRollActive[PepperIO::kNumDrums] = {};
-	int mRollPhase[PepperIO::kNumDrums] = {};
-	int mRollCounter[PepperIO::kNumDrums] = {};
 
 	void fireTrigger(unsigned int drum, unsigned int frame, BelaContext* context);
-	int rollIntervalForDrum(unsigned int drum) const;
-	void processRoll(unsigned int drum, BelaContext* context, unsigned int frame);
 };

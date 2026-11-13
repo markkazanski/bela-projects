@@ -1,0 +1,32 @@
+#pragma once
+
+#include "PepperIO.h"
+#include "TrillControls.h"
+#include "TriggerOut.h"
+#include <Bela.h>
+
+class FillEngine {
+public:
+	void setTrillState(const TrillFillState& state);
+	void setButtonHeld(unsigned int drum, bool held);
+	void process(float beatPhase, TriggerOut& triggers, int* ledFlashFrames = nullptr);
+
+private:
+	TrillFillState mTrill;
+	bool mButtonHeld[PepperIO::kNumDrums] = {};
+
+	bool mTrillWasActive = false;
+	int mSnareHitCount = 0;
+	int mLastIdx[PepperIO::kNumDrums] = {-1, -1, -1, -1};
+	bool mWaitingNextGrid[PepperIO::kNumDrums] = {};
+
+	int hitsPerBeatForDrum(unsigned int drum) const;
+	bool drumActive(unsigned int drum) const;
+	void onDeactivate(unsigned int drum);
+	void tryFire(unsigned int drum, int idx, float beatPhase, int hits,
+		TriggerOut& triggers, int* ledFlashFrames);
+	float snareAccent() const;
+	float hatAccent() const;
+	bool shouldPlayHatGrid(int idx) const;
+	bool chaosSkip(unsigned int drum) const;
+};

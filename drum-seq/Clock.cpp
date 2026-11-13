@@ -6,6 +6,7 @@
 void Clock::setup(BelaContext* context) {
 	mSamplesPerStep = stepPeriodSamples(context->analogSampleRate);
 	mExtTimeout = (unsigned int)(context->analogSampleRate * 2.0);
+	mCurrentStep = mStep;
 }
 
 void Clock::setTempoBpm(float bpm) {
@@ -43,8 +44,10 @@ void Clock::onRisingEdge(BelaContext* context) {
 	mLastEdgeTime = now;
 	mExternalActive = true;
 	mExtMissFrames = 0;
+	mFramesSinceEdge = 0;
 	mPhase = 0.f;
 	mTickPending = true;
+	mCurrentStep = mStep;
 	prepareStepTiming(context);
 }
 
@@ -78,6 +81,7 @@ void Clock::processDigital(BelaContext* context, unsigned int frame) {
 void Clock::processAnalog(BelaContext* context, unsigned int frame) {
 	mSampleClock += 1.0;
 	if (mExternalActive) {
+		mFramesSinceEdge++;
 		mExtMissFrames++;
 		if (mExtMissFrames > mExtTimeout)
 			mExternalActive = false;
@@ -88,6 +92,7 @@ void Clock::processAnalog(BelaContext* context, unsigned int frame) {
 		if (mPhase >= mSamplesPerStep) {
 			mPhase -= mSamplesPerStep;
 			mTickPending = true;
+			mCurrentStep = mStep;
 			prepareStepTiming(context);
 		}
 	}
@@ -108,4 +113,16 @@ void Clock::afterTickProcessed() {
 void Clock::looseDelayFrames(int* out4) const {
 	for (unsigned int d = 0; d < PepperIO::kNumDrums; ++d)
 		out4[d] = mLooseDelay[d];
+}
+
+float Clock::beatPhase() const {
+	float stepPhase = 0.f;
+	if (mSamplesPerStep > 0.f) {
+		if (mExternalActive && mPredictedPeriod > 0.)
+			stepPhase = std::min(1.f, (float)mFramesSinceEdge / (float)mPredictedPeriod);
+		else
+			stepPhase = std::max(0.f, std::min(1.f, mPhase / mSamplesPerStep));
+	}
+	const int beatStep = mCurrentStep % 4;
+	return (beatStep + stepPhase) / 4.f;
 }

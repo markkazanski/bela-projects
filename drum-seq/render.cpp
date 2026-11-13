@@ -4,14 +4,19 @@
 
 #include "Clock.h"
 #include "Controls.h"
+#include "FillEngine.h"
 #include "PatternEngine.h"
 #include "PepperIO.h"
+#include "TrillControls.h"
 #include "TriggerOut.h"
 
 static Clock gClock;
 static Controls gControls;
 static PatternEngine gEngine;
 static TriggerOut gTriggers;
+static TrillControls gTrill;
+static FillEngine gFill;
+static bool gTrillPolledThisBlock = false;
 
 static int gLedFlash[PepperIO::kNumDrums] = {};
 static bool gBeatLed = false;
@@ -75,6 +80,7 @@ bool setup(BelaContext* context, void* userData) {
 	gClock.setup(context);
 	if (!gControls.setup(context))
 		return false;
+	gTrill.setup();
 
 	srand(42);
 	rt_printf("Pepper Grids drum sequencer ready\n");
@@ -91,6 +97,8 @@ void render(BelaContext* context, void* userData) {
 	if (anaFrames > 0 && digFrames >= anaFrames)
 		anaRatio = digFrames / anaFrames;
 
+	gTrillPolledThisBlock = false;
+
 	for (unsigned int n = 0; n < digFrames; ++n) {
 #if DRUM_SEQ_CALIBRATION_MODE
 		if (anaFrames > 0 && (n % anaRatio) == 0) {
@@ -106,6 +114,14 @@ void render(BelaContext* context, void* userData) {
 		const unsigned int aFrame = doAnalog ? (n / anaRatio) : 0;
 
 		if (doAnalog) {
+			if (!gTrillPolledThisBlock) {
+				gTrill.poll(context);
+				const TrillFillState fs = gTrill.fillState();
+				gEngine.setFillState(fs.active, fs.kickDrop);
+				gFill.setTrillState(fs);
+				gTrillPolledThisBlock = true;
+			}
+
 			gControls.processAnalog(context, aFrame);
 			gClock.processAnalog(context, aFrame);
 
@@ -113,10 +129,7 @@ void render(BelaContext* context, void* userData) {
 
 			for (unsigned int d = 0; d < PepperIO::kNumDrums; ++d) {
 				gEngine.setDensity(d, gControls.density(d));
-				if (gControls.rollHeld(d))
-					gTriggers.startRoll(d);
-				else
-					gTriggers.stopRoll(d);
+				gFill.setButtonHeld(d, gControls.rollHeld(d));
 			}
 			gEngine.setPatternPosition(gControls.patternX(), gControls.patternY());
 			if (!gClock.externalActive())
@@ -135,6 +148,7 @@ void render(BelaContext* context, void* userData) {
 				gClock.afterTickProcessed();
 			}
 
+			gFill.process(gClock.beatPhase(), gTriggers, gLedFlash);
 			gTriggers.process(context, aFrame);
 		}
 
@@ -145,6 +159,9 @@ void render(BelaContext* context, void* userData) {
 		}
 		gControls.setLedState(4, gBeatLed);
 		gControls.setLedState(5, gClock.externalActive());
+		const TrillFillState trillLed = gTrill.fillState();
+		gControls.setLedState(6, trillLed.active);
+		gControls.setLedState(7, trillLed.kickDrop);
 		gControls.applyLeds(context, n);
 #endif
 	}

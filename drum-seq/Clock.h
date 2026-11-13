@@ -18,6 +18,7 @@ public:
 	float swingDelayFrames() const { return mSwingDelayThisStep; }
 	bool externalActive() const { return mExternalActive; }
 	float stepPeriodFrames() const { return mSamplesPerStep; }
+	float beatPhase() const;
 	void looseDelayFrames(int* out4) const;
 
 private:
@@ -27,6 +28,8 @@ private:
 	float mFeel = 0.f;
 	int mStep = 0;
 	int mBar = 0;
+	int mCurrentStep = 0;
+	unsigned int mFramesSinceEdge = 0;
 	bool mTickPending = false;
 	float mSwingDelayThisStep = 0.f;
 

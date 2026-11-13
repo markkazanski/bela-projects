@@ -21,6 +21,11 @@ void PatternEngine::setFeel(float feel01) {
 	mFeel = std::max(0.f, std::min(1.f, feel01));
 }
 
+void PatternEngine::setFillState(bool snareHatFill, bool kickDrop) {
+	mSnareHatFill = snareHatFill;
+	mKickDrop = kickDrop;
+}
+
 float PatternEngine::laneValue(int gx, int gy, int lane, int step) const {
 	gx = std::max(0, std::min(Grooves::kGridSize - 1, gx));
 	gy = std::max(0, std::min(Grooves::kGridSize - 1, gy));
@@ -69,9 +74,6 @@ bool PatternEngine::shouldPlay(unsigned int drum, int step, int bar, float level
 
 void PatternEngine::onStep(int step, int bar, TriggerOut& triggers, float swingDelayFrames,
 	const int* extraDelayFrames, int* ledFlashFrames) {
-	static const int kLaneForDrum[PepperIO::kNumDrums] = {
-		Grooves::kLaneKick, Grooves::kLaneSnare, Grooves::kLaneHat, Grooves::kLaneFm};
-
 	float kickLevel = blendLane(Grooves::kLaneKick, step)
 		+ mChaos[PepperIO::kKick][step];
 	float snareLevel = blendLane(Grooves::kLaneSnare, step)
@@ -100,13 +102,14 @@ void PatternEngine::onStep(int step, int bar, TriggerOut& triggers, float swingD
 			ledFlashFrames[drum] = 1100;
 	};
 
-	if (playKick)
+	if (playKick && !mKickDrop)
 		hit(PepperIO::kKick, kickLevel, Grooves::kLaneKick);
-	if (playSnare)
+	if (playSnare && !mSnareHatFill)
 		hit(PepperIO::kSnare, snareLevel, Grooves::kLaneSnare);
 
 	float hatLevel = blendLane(Grooves::kLaneHat, step) + mChaos[PepperIO::kHat][step];
 	float fmLevel = blendLane(Grooves::kLaneFm, step) + mChaos[PepperIO::kFm][step];
-	hit(PepperIO::kHat, hatLevel, Grooves::kLaneHatOpen);
+	if (!mSnareHatFill)
+		hit(PepperIO::kHat, hatLevel, Grooves::kLaneHatOpen);
 	hit(PepperIO::kFm, fmLevel, Grooves::kLaneFm);
 }
