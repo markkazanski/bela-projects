@@ -2,7 +2,6 @@
 #include <algorithm>
 
 bool Controls::setup(BelaContext* context) {
-	mHoldFrames = (int)(context->digitalSampleRate * 0.25f);
 	for (int i = 0; i < 8; ++i)
 		mFilter[i].setup(8.f, context->analogSampleRate, OnePole::LOWPASS);
 	for (unsigned int i = 0; i < 4; ++i) {
@@ -25,22 +24,7 @@ void Controls::processDigital(BelaContext* context, unsigned int frame) {
 		bool pressed = mButtons[i].process(context, frame);
 		if (PepperIO::kButtonActiveLow)
 			pressed = !pressed;
-		if (pressed && !mButtonDown[i]) {
-			mButtonDown[i] = true;
-			mHoldCounter[i] = 0;
-		}
-		if (!pressed && mButtonDown[i]) {
-			if (mHoldCounter[i] < mHoldFrames)
-				mMuted[i] = !mMuted[i];
-			mRollHeld[i] = false;
-			mButtonDown[i] = false;
-			mHoldCounter[i] = 0;
-		}
-		if (mButtonDown[i]) {
-			mHoldCounter[i]++;
-			if (mHoldCounter[i] >= mHoldFrames)
-				mRollHeld[i] = true;
-		}
+		mRollHeld[i] = pressed;
 	}
 }
 
@@ -56,12 +40,6 @@ float Controls::density(unsigned int drum) const {
 	if (drum > 3)
 		return 0.7f;
 	return mapDensity(mPot[drum]);
-}
-
-bool Controls::muted(unsigned int drum) const {
-	if (drum > 3)
-		return false;
-	return mMuted[drum];
 }
 
 bool Controls::rollHeld(unsigned int drum) const {
@@ -92,10 +70,6 @@ void Controls::setLedState(int index, bool on) {
 }
 
 void Controls::applyLeds(BelaContext* context, unsigned int frame) {
-	for (int i = 0; i < 10; ++i) {
-		bool show = mLedState[i];
-		if (i < 4 && mMuted[i])
-			show = false;
-		PepperIO::setLed(context, frame, i, show);
-	}
+	for (int i = 0; i < 10; ++i)
+		PepperIO::setLed(context, frame, i, mLedState[i]);
 }

@@ -113,7 +113,6 @@ void render(BelaContext* context, void* userData) {
 
 			for (unsigned int d = 0; d < PepperIO::kNumDrums; ++d) {
 				gEngine.setDensity(d, gControls.density(d));
-				gEngine.setMuted(d, gControls.muted(d));
 				if (gControls.rollHeld(d))
 					gTriggers.startRoll(d);
 				else

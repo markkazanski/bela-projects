@@ -21,11 +21,6 @@ void PatternEngine::setFeel(float feel01) {
 	mFeel = std::max(0.f, std::min(1.f, feel01));
 }
 
-void PatternEngine::setMuted(unsigned int drum, bool muted) {
-	if (drum < PepperIO::kNumDrums)
-		mMuted[drum] = muted;
-}
-
 float PatternEngine::laneValue(int gx, int gy, int lane, int step) const {
 	gx = std::max(0, std::min(Grooves::kGridSize - 1, gx));
 	gy = std::max(0, std::min(Grooves::kGridSize - 1, gy));
@@ -64,7 +59,7 @@ float PatternEngine::fillBoost(int bar, unsigned int drum) const {
 }
 
 bool PatternEngine::shouldPlay(unsigned int drum, int step, int bar, float level) const {
-	if (mMuted[drum] || level <= 0.f)
+	if (level <= 0.f)
 		return false;
 	float density = mDensity[drum] + fillBoost(bar, drum);
 	density = std::min(1.f, density);
