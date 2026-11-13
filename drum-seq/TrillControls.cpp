@@ -196,7 +196,7 @@ void TrillControls::pollBar(BelaContext* context) {
 		mFill.kickDrop = mKickDrop;
 	} else {
 		if (mReleaseFramesLeft > 0)
-			mReleaseFramesLeft--;
+			mReleaseFramesLeft -= std::max(1, (int)context->analogFrames);
 		if (mReleaseFramesLeft > 0) {
 			mFill.active = true;
 			mFill.intensity = mLastIntensity;
@@ -220,10 +220,11 @@ int TrillControls::zoneFromPosition(float pos, int prevZone) const {
 	pos = std::max(0.f, std::min(1.f, pos));
 	const float w = 1.f / (float)TrillCfg::kNumRateZones;
 	prevZone = std::max(0, std::min(TrillCfg::kNumRateZones - 1, prevZone));
-	const float center = (prevZone + 0.5f) * w;
-	if (pos < center - w * 0.5f + TrillCfg::kZoneHysteresis && prevZone > 0)
+	const float lowerEdge = (float)prevZone * w;
+	const float upperEdge = (float)(prevZone + 1) * w;
+	if (pos < lowerEdge - TrillCfg::kZoneHysteresis && prevZone > 0)
 		return prevZone - 1;
-	if (pos > center + w * 0.5f - TrillCfg::kZoneHysteresis
+	if (pos > upperEdge + TrillCfg::kZoneHysteresis
 		&& prevZone < TrillCfg::kNumRateZones - 1)
 		return prevZone + 1;
 	return prevZone;

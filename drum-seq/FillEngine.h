@@ -18,6 +18,7 @@ private:
 	bool mTrillWasActive = false;
 	int mSnareHitCount = 0;
 	int mLastIdx[PepperIO::kNumDrums] = {-1, -1, -1, -1};
+	int mLastHits[PepperIO::kNumDrums] = {-1, -1, -1, -1};
 	bool mWaitingNextGrid[PepperIO::kNumDrums] = {};
 	float mRollProgress[PepperIO::kNumDrums] = {};
 	float mPrevBeatPhase = 0.f;

@@ -31,6 +31,7 @@ void FillEngine::setButtonHeld(unsigned int drum, bool held) {
 
 void FillEngine::onDeactivate(unsigned int drum) {
 	mLastIdx[drum] = -1;
+	mLastHits[drum] = -1;
 	mWaitingNextGrid[drum] = false;
 	mRollProgress[drum] = 0.f;
 	if (drum == PepperIO::kSnare)
@@ -142,6 +143,8 @@ void FillEngine::process(float beatPhase, TriggerOut& triggers, int* ledFlashFra
 		}
 		mSnareHitCount = 0;
 		const int h = std::max(1, mTrill.hitsPerBeat);
+		mLastHits[PepperIO::kSnare] = h;
+		mLastHits[PepperIO::kHat] = h;
 		const int idx0 = (int)std::floor(beatPhase * (float)h);
 		const float frac = beatPhase * (float)h - (float)idx0;
 		if (frac < 0.1f) {
@@ -161,8 +164,20 @@ void FillEngine::process(float beatPhase, TriggerOut& triggers, int* ledFlashFra
 		const int hits = hitsPerBeatForDrum(d);
 		const int idx = (int)std::floor(beatPhase * (float)hits);
 
+		if (mLastHits[d] >= 0 && hits != mLastHits[d]) {
+			mLastIdx[d] = idx;
+			mLastHits[d] = hits;
+			continue;
+		}
+		if (mLastHits[d] < 0)
+			mLastHits[d] = hits;
+
 		if (mWaitingNextGrid[d]) {
-			if (idx != mLastIdx[d] || mLastIdx[d] < 0) {
+			if (mLastIdx[d] < 0) {
+				mLastIdx[d] = idx;
+				continue;
+			}
+			if (idx != mLastIdx[d]) {
 				if (d == PepperIO::kHat && !shouldPlayHatGrid(idx)) {
 					mLastIdx[d] = idx;
 					continue;
