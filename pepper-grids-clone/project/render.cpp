@@ -31,6 +31,7 @@ static bool gLeds[10] = {};
 static bool gLedDirty = false;
 static BarTouches gBarTouches;
 static int gHhOpenStep = -1;
+static int gSyncPulseLeft = 0;
 
 static void setLed(int i, bool on) {
 	if (i >= 0 && i < 10 && gLeds[i] != on) {
@@ -194,6 +195,8 @@ void render(BelaContext* context, void*) {
 
 			if (gClock.consumeStepTick()) {
 				const int step = gClock.step();
+				if (step % 4 == 0)
+					gSyncPulseLeft = PepperPins::gCalib.trigPulseFrames;
 				EngineInputs in;
 				in.mapX = gPattern.mapX();
 				in.mapY = gPattern.mapY();
@@ -246,6 +249,14 @@ void render(BelaContext* context, void*) {
 			gFill.process(gClock.subStepPhase(), gTriggers, gLedFlash);
 			gTriggers.process(1);
 			gTriggers.write(context, aFrame);
+			if (gSyncPulseLeft > 0)
+				gSyncPulseLeft--;
+		}
+
+		if (context->audioOutChannels > 1) {
+			const float syncOut = gSyncPulseLeft > 0 ? PepperPins::gCalib.trigHigh : 0.f;
+			audioWrite(context, n, 0, 0.f);
+			audioWrite(context, n, 1, syncOut);
 		}
 
 		for (int p = 0; p < PepperPins::kNumParts; ++p) {

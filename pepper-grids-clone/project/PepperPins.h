@@ -11,13 +11,14 @@
 // HH accent CV 6: hhAccentBase / hhAccentPeak on every hit (not accentLow/High).
 // Knob full-scale: Knobs.cpp kKnobMax[] (measured CW on +12 V).
 // LEDs: use digitalWrite (not digitalWriteOnce) so state persists across blocks.
-// Audio out L: dead on this unit (no DC/AC at jack, R OK) — unused; FM trigger on CV 3.
+// Audio out L: dead on this unit (no DC/AC at jack) — held at 0 in firmware.
+// Audio out R: quarter-note sync (step % 4, ~trigPulseFrames, trigHigh); FM trigger on CV 3.
 
 #ifndef GRIDS_HW_TEST
 #define GRIDS_HW_TEST 0
 #endif
 #ifndef GRIDS_GUI
-#define GRIDS_GUI 1
+#define GRIDS_GUI 0
 #endif
 // Digital clock jumpers on pins 9/11 are NOT used (internal clock only).
 // Trill Hub: I2C bus 1, Bar 0x20, Square 0x28.

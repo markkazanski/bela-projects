@@ -104,6 +104,11 @@ Record any pin or polarity changes in the `PepperPins.h` comment block.
 | 2 | Clear Square latch |
 | 3 | Hold: freeze 4-step loop |
 
+| Audio out | Signal |
+|-----------|--------|
+| R | Quarter-note sync (1 pulse/beat, step % 4; ~5 ms at `trigHigh`; not swung) |
+| L | Unused (dead jack on this unit) |
+
 | CV out | Signal |
 |--------|--------|
 | 0 / 1 / 2 / 3 | BD / SD / HH / FM trigger (~5 ms) |
