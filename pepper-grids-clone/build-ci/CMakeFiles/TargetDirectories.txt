@@ -1,0 +1,4 @@
+/Users/mkazanski/Documents/PROJECTS/Bela/bela-projects/pepper-grids-clone/build-ci/CMakeFiles/tests.dir
+/Users/mkazanski/Documents/PROJECTS/Bela/bela-projects/pepper-grids-clone/build-ci/CMakeFiles/test.dir
+/Users/mkazanski/Documents/PROJECTS/Bela/bela-projects/pepper-grids-clone/build-ci/CMakeFiles/edit_cache.dir
+/Users/mkazanski/Documents/PROJECTS/Bela/bela-projects/pepper-grids-clone/build-ci/CMakeFiles/rebuild_cache.dir

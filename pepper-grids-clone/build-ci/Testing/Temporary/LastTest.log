@@ -1,0 +1,19 @@
+Start testing: Nov 13 18:07 CST
+----------------------------------------------------------
+1/1 Testing: engine
+1/1 Test: engine
+Command: "/Users/mkazanski/Documents/PROJECTS/Bela/bela-projects/pepper-grids-clone/build-ci/tests"
+Directory: /Users/mkazanski/Documents/PROJECTS/Bela/bela-projects/pepper-grids-clone/build-ci
+"engine" start time: Nov 13 18:07 CST
+Output:
+----------------------------------------------------------
+All tests passed.
+<end of output>
+Test time =   0.44 sec
+----------------------------------------------------------
+Test Passed.
+"engine" end time: Nov 13 18:07 CST
+"engine" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Nov 13 18:07 CST
