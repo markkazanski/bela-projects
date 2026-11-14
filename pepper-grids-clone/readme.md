@@ -50,6 +50,8 @@ Set `GRIDS_TRILL_DEBUG` to `0` when done.
 
 **Bar tracking:** With two simultaneous touches, the Bar follows the contact nearest the previous position (debug `fi=` index) instead of jumping to the largest blob.
 
+**Bar fills:** While the Bar is held, alternating snare and hi-hat hits fire at the zone rate. Snare loudness **crescendos** over about one bar (`kFillRampSteps` in [FillRamp.h](project/FillRamp.h)) with a slight end-weighted curve; light pressure adds a small boost on top. Fill hi-hats stay at `hhAccentBase` (no ramp) so the snare build stays forward. Releasing the Bar resets the ramp. Firm pressure still triggers kick drop (BD muted).
+
 ### I2C errors
 
 A single failed read (`Remote I/O error`) used to disable the Trill library until restart. The aux task now clears the touch state, prints `Trill Bar read error, retrying`, and calls `setup()` again every 500 ms. On success you see `Trill Bar recovered` (confirmed on hardware). Keep fingers off the sensor briefly after recovery so baseline settles. If errors are frequent, shorten Hub cabling and keep it away from the Eurorack power bus.
@@ -90,7 +92,7 @@ Record any pin or polarity changes in the `PepperPins.h` comment block.
 | 4 / 5 / 6 | BD / SD / HH accent (BD/SD gate-style; HH is a level on every hit via `hhAccentBase` / `hhAccentPeak`) |
 | 7 | HH decay CV (~one open hat per 16-step bar; `hhDecayClosed` / `hhDecayOpen` in [PepperPins.h](project/PepperPins.h)) |
 
-**Hi-hat accent (CV 6):** Every HH trigger sends a voltage in a narrow range—unaccented steps use `hhAccentBase`, accented steps use `hhAccentPeak` (defaults 0.35 / 0.55). Bar fill hits interpolate between those. Set `hhAccentBase` to `0` if your module needs a gate-only accent input.
+**Hi-hat accent (CV 6):** Every HH trigger sends a voltage in a narrow range—unaccented steps use `hhAccentBase`, accented steps use `hhAccentPeak` (defaults 0.35 / 0.55). Trill Bar fill hats are fixed at `hhAccentBase`. Set `hhAccentBase` to `0` if your module needs a gate-only accent input.
 
 **Hi-hat decay (CV 7):** At the start of each bar (steps 0 and 16) the firmware picks at most one open-hat step: an HH hit with room to ring (gap ≥ 2 to the next hat), preferring off-beat “and” positions. All other hats are closed. CV 7 updates ~1 ms before the trigger and holds until the next HH hit. Patch **CV 7 → hat DECAY CV**.
 

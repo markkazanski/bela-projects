@@ -1,3 +1,4 @@
+#include "FillRamp.h"
 #include "GridsEngine.h"
 #include "Patterns.h"
 #include <algorithm>
@@ -213,6 +214,18 @@ static void test_fm_mirrored_level() {
 	}
 }
 
+static void test_fill_ramp() {
+	assert(fillRamp01(0.f) == 0.f);
+	assert(fillRamp01(kFillRampSteps) == 1.f);
+	assert(fillRamp01(kFillRampSteps * 2.f) == 1.f);
+	float prev = fillRamp01(0.f);
+	for (int i = 1; i <= 20; ++i) {
+		const float r = fillRamp01((float)i);
+		assert(r >= prev);
+		prev = r;
+	}
+}
+
 static void test_hh_gap_matches_ticks() {
 	EngineInputs in = fullDensity();
 	in.chaos = 0;
@@ -335,6 +348,7 @@ int main() {
 	test_y_affects_bd();
 	test_fm_density_zero_silent();
 	test_fm_mirrored_level();
+	test_fill_ramp();
 	test_hh_gap_matches_ticks();
 	test_hh_open_step();
 	test_level_at_matches_tick();

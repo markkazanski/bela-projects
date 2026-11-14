@@ -19,5 +19,6 @@ private:
 	int mLastIdx = -1;
 	float mLastPhase = 0.f;
 	float mIntensity = 0.f;
+	float mElapsedSteps = 0.f;
 
 };

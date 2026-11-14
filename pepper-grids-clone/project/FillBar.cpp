@@ -1,4 +1,5 @@
 #include "FillBar.h"
+#include "FillRamp.h"
 #include "PepperPins.h"
 #include <algorithm>
 #include <cmath>
@@ -14,9 +15,12 @@ void FillBar::setBar(const BarSample& b) {
 	if (was && !mActive) {
 		mLastIdx = -1;
 		mLastPhase = 0.f;
+		mElapsedSteps = 0.f;
 	}
-	if (!was && mActive)
+	if (!was && mActive) {
 		mLastIdx = -1;
+		mElapsedSteps = 0.f;
+	}
 }
 
 void FillBar::process(float subPhase, TriggerOut& out, int* ledFlash) {
@@ -25,22 +29,21 @@ void FillBar::process(float subPhase, TriggerOut& out, int* ledFlash) {
 	subPhase = std::max(0.f, std::min(0.9999f, subPhase));
 	const int h = mHits;
 	const int idx = (int)std::floor(subPhase * (float)h);
-	if (subPhase < mLastPhase - 0.5f)
+	if (subPhase < mLastPhase - 0.5f) {
 		mLastIdx = -1;
+		mElapsedSteps += 1.f;
+	}
 	mLastPhase = subPhase;
 	if (idx == mLastIdx)
 		return;
 	if (idx % 2 == 1) {
-		const float acc = std::min(1.f, 0.35f + 0.65f * mIntensity);
-		out.fireNow(PepperPins::kSd, acc, true);
+		const float ramp = fillRamp01(mElapsedSteps + subPhase);
+		const float sdAcc = std::min(1.f, 0.2f + 0.8f * ramp + 0.15f * mIntensity);
+		out.fireNow(PepperPins::kSd, sdAcc, true);
 		if (ledFlash)
 			ledFlash[1] = 800;
 	} else {
-		const float tint = std::min(1.f, 0.3f + 0.7f * mIntensity);
-		const float& b = PepperPins::gCalib.hhAccentBase;
-		const float& p = PepperPins::gCalib.hhAccentPeak;
-		const float hhAcc = b + (p - b) * tint;
-		out.fireNow(PepperPins::kHh, hhAcc, true, 0.f);
+		out.fireNow(PepperPins::kHh, PepperPins::gCalib.hhAccentBase, true, 0.f);
 		if (ledFlash)
 			ledFlash[2] = 600;
 	}
