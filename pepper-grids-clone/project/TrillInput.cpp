@@ -80,6 +80,24 @@ static unsigned retryIntervalUs(int failCount) {
 		return Cfg::kRetryBackoffUs;
 	return Cfg::kRetryIntervalUs;
 }
+
+constexpr unsigned kTrillLogMinUs = 2000000;
+static unsigned sTrillLogUs = 0;
+static unsigned sLastBarReadErrUs = 0;
+static unsigned sLastSqReadErrUs = 0;
+static unsigned sLastBarRecoverUs = 0;
+static unsigned sLastSqRecoverUs = 0;
+
+static void trillLogTick(unsigned dtUs) {
+	sTrillLogUs += dtUs;
+}
+
+static bool trillLogDue(unsigned& lastUs) {
+	if (sTrillLogUs - lastUs < kTrillLogMinUs)
+		return false;
+	lastUs = sTrillLogUs;
+	return true;
+}
 static float sLastSqXRaw = 0.f;
 static float sLastSqYRaw = 0.f;
 static bool sSqWasTouching = false;
@@ -376,8 +394,8 @@ static void tryRecoverBar() {
 		sBarLink = true;
 		sBarEverOk.store(true, std::memory_order_release);
 		sBarRecoverFails = 0;
-		sBar.printDetails();
-		rt_printf("Trill Bar recovered\n");
+		if (trillLogDue(sLastBarRecoverUs))
+			rt_printf("Trill Bar recovered\n");
 	} else {
 		sBarRecoverFails++;
 	}
@@ -393,21 +411,23 @@ static void tryRecoverSquare() {
 		sSquareLink = true;
 		sSquareEverOk.store(true, std::memory_order_release);
 		sSquareRecoverFails = 0;
-		sSquare.printDetails();
-		rt_printf("Trill Square recovered\n");
+		if (trillLogDue(sLastSqRecoverUs))
+			rt_printf("Trill Square recovered\n");
 	} else {
 		sSquareRecoverFails++;
 	}
 }
 
 static void pollSquare() {
+	trillLogTick(Cfg::kSquarePollUs);
 	if (!sSquareLink) {
 		tryRecoverSquare();
 		return;
 	}
 	if (sSquare.readI2C() != 0) {
 		if (sSquareLink) {
-			rt_printf("Trill Square read error, retrying\n");
+			if (trillLogDue(sLastSqReadErrUs))
+				rt_printf("Trill Square read error, retrying\n");
 			sSquareLink = false;
 			releaseSquarePublished();
 		}
@@ -491,6 +511,7 @@ static int barTopTwoTouches(unsigned nt, float& p0, float& p1, float* pinchDist)
 }
 
 static void pollBar(bool& touching, float& intensity) {
+	trillLogTick(Cfg::kBarPollUs);
 	touching = false;
 	intensity = 0.f;
 	if (!sBarLink) {
@@ -499,7 +520,8 @@ static void pollBar(bool& touching, float& intensity) {
 	}
 	if (sBar.readI2C() != 0) {
 		if (sBarLink) {
-			rt_printf("Trill Bar read error, retrying\n");
+			if (trillLogDue(sLastBarReadErrUs))
+				rt_printf("Trill Bar read error, retrying\n");
 			sBarLink = false;
 			releaseBarPublished();
 		}
@@ -631,7 +653,7 @@ static void squareAuxLoop(void*) {
 		pollSquare();
 #if GRIDS_TRILL_DEBUG
 		static unsigned dbgSq;
-		if (++dbgSq >= 40) {
+		if (++dbgSq >= 100) {
 			dbgSq = 0;
 			static const char* kSqMode[] = {"none", "full", "edgeX", "edgeY"};
 			const uint8_t sm = sDbgSqMode.load(std::memory_order_relaxed);
@@ -677,7 +699,7 @@ static void barAuxLoop(void*) {
 
 #if GRIDS_TRILL_DEBUG
 		static unsigned dbgBar;
-		if (++dbgBar >= 40) {
+		if (++dbgBar >= 100) {
 			dbgBar = 0;
 			const uint32_t b = sBarState.load(std::memory_order_acquire);
 			const int zone = (int)((b >> 1) & 7u);

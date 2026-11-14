@@ -31,7 +31,7 @@ Set `GRIDS_HW_TEST` back to `0` when done.
 
 ### 2. Trill calibration
 
-In [TrillInput.h](project/TrillInput.h) set `GRIDS_TRILL_DEBUG` to `1`, deploy, run. Console (~5 Hz) shows raw Bar/Square values.
+In [TrillInput.h](project/TrillInput.h) set `GRIDS_TRILL_DEBUG` to `1`, deploy, run. Console shows raw Bar/Square values at ~1 Hz per sensor (still chatty—use only while calibrating).
 
 Constants below reflect the Nov 2025 bring-up log (edit `namespace Cfg` in [TrillInput.cpp](project/TrillInput.cpp) if your sensors differ):
 
@@ -62,9 +62,9 @@ Set `GRIDS_TRILL_DEBUG` to `0` when done.
 
 A single failed read (`errno 121`, Remote I/O error) usually means the sensor did not ACK: polling too fast while a scan is in progress, a stale I2C file descriptor, or wiring/noise. Square and Bar run in **separate aux tasks** at **12 ms** and **10 ms** (`kSquarePollUs` / `kBarPollUs` in [TrillInput.cpp](project/TrillInput.cpp)), matching Bela’s Trill examples instead of the old 5 ms shared loop.
 
-At **startup**, each sensor is initialised up to **5** times (`kSetupAttempts`, 300 ms apart). If one still fails, the project runs anyway: knobs 4/5 drive the map until the Square comes up; the aux task keeps retrying until `Trill … recovered` and `printDetails()` appear.
+At **startup**, each sensor is initialised up to **5** times (`kSetupAttempts`, 300 ms apart). If one still fails, the project runs anyway: knobs 4/5 drive the map until the Square comes up; the aux task keeps retrying until `Trill … recovered` appears. `printDetails()` runs only on the **first** successful init, not on later recoveries.
 
-On **read failure** while running, the firmware clears touch state, prints `Trill … read error, retrying`, closes the I2C fd, and calls `setup()` again (500 ms between attempts; after 3 failed attempts, 2 s until the device comes back). Keep fingers off the sensor briefly after recovery so baseline settles.
+On **read failure** while running, the firmware clears touch state, may print `Trill … read error, retrying` (rate-limited ~2 s per device), closes the I2C fd, and calls `setup()` again (500 ms between attempts; after 3 failed attempts, 2 s until the device comes back). Keep fingers off the sensor briefly after recovery so baseline settles. Short recovery logs avoid Bela’s “printing too quickly” IDE warning during flaky I2C.
 
 On **firmware 2** (Bar/Square), `reset` / `setScanTrigger` “failed to write” lines during setup are normal library noise. Treat **`Unable to identify device`** as the real failure (sensor did not answer).
 

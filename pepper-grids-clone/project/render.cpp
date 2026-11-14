@@ -6,12 +6,14 @@
 #include "DensityMacro.h"
 #include "FillBar.h"
 #include "GridsEngine.h"
-#include "GuiSnapshot.h"
-#include "GuiView.h"
 #include "InternalClock.h"
 #include "Knobs.h"
 #include "PatternXY.h"
 #include "PepperPins.h"
+#if GRIDS_GUI
+#include "GuiSnapshot.h"
+#include "GuiView.h"
+#endif
 #include "TrillInput.h"
 #include "TriggerOut.h"
 #include "Rng.h"
@@ -24,7 +26,9 @@ static TriggerOut gTriggers;
 static PatternXY gPattern;
 static TrillInput gTrill;
 static FillBar gFill;
+#if GRIDS_GUI
 static GuiView gGui;
+#endif
 
 static int gLedFlash[PepperPins::kNumParts] = {};
 static bool gLeds[10] = {};
