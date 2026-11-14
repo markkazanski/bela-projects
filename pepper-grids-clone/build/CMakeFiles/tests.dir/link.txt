@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/tests.dir/test_engine.cpp.o "CMakeFiles/tests.dir/Users/mkazanski/Documents/PROJECTS/Bela/bela-projects/pepper-grids-clone/project/GridsEngine.cpp.o" -o tests

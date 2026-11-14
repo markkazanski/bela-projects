@@ -3,9 +3,11 @@ on:
   push:
     paths:
       - "pepper-grids-clone/**"
+      - ".github/workflows/pepper-grids-clone.yml"
   pull_request:
     paths:
       - "pepper-grids-clone/**"
+      - ".github/workflows/pepper-grids-clone.yml"
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -14,6 +16,6 @@ jobs:
       - name: Configure and test
         working-directory: pepper-grids-clone
         run: |
-          cmake -S test -B build
-          cmake --build build
-          ctest --test-dir build --output-on-failure
+          cmake -S test -B build-ci
+          cmake --build build-ci
+          ctest --test-dir build-ci --output-on-failure
