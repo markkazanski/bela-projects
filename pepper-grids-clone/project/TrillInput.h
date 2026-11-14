@@ -18,6 +18,11 @@ struct BarSample {
 	float densityMacro = 0.f;
 };
 
+struct BarTouches {
+	int count = 0;
+	float pos[2] = {0.f, 0.f};
+};
+
 struct PadSample;
 
 class TrillInput {
@@ -25,6 +30,7 @@ public:
 	bool setup();
 	void publishToPattern(PadSample& out) const;
 	BarSample bar() const;
+	BarTouches barTouches() const;
 
 	bool anyTouch() const;
 	bool fillActive() const { return bar().touching; }

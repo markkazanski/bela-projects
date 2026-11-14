@@ -38,6 +38,7 @@ constexpr unsigned kBarFillOnsetPolls =
 	(kBarFillOnsetUs + kBarPollUs - 1) / kBarPollUs;
 constexpr float kBarPinchMinSep = 0.12f;
 constexpr float kBarPinchRange = 0.35f;
+constexpr bool kBarLedInvert = false;
 } // namespace
 
 enum BarMode { kBarIdle = 0, kBarFill = 1, kBarDensity = 2 };
@@ -61,6 +62,7 @@ static std::atomic<uint32_t> sSquareXY{0x80008000u};
 static std::atomic<uint8_t> sSquareTouch{0};
 // bits: 0 active, 1-3 zone, 4-11 intensity U8, 12 kickDrop, 13 densityMode, 14-21 macro U8
 static std::atomic<uint32_t> sBarState{0};
+static std::atomic<uint32_t> sBarTouches{0};
 static int sRateZone = 2;
 static bool sKickDrop = false;
 static float sLastIntensity = 0.f;
@@ -297,6 +299,22 @@ static bool squareParse(unsigned n, unsigned nh, float& xRaw, float& yRaw, float
 	return false;
 }
 
+static float barPosForLed(float p) {
+	if (Cfg::kBarLedInvert)
+		p = 1.f - p;
+	return std::max(0.f, std::min(1.f, p));
+}
+
+static void publishBarTouches(int count, float p0, float p1) {
+	count = std::max(0, std::min(2, count));
+	p0 = barPosForLed(p0);
+	p1 = barPosForLed(p1);
+	const uint32_t v = (uint32_t)count
+		| ((uint32_t)(int)(p0 * 255.f + 0.5f) << 8)
+		| ((uint32_t)(int)(p1 * 255.f + 0.5f) << 16);
+	sBarTouches.store(v, std::memory_order_release);
+}
+
 static void publishBar(bool active, int zone, float intensity, bool kickDrop,
 	bool densityMode, float densityMacro) {
 	const int macroU8 =
@@ -322,6 +340,7 @@ static void releaseBarPublished() {
 	sDbgBarPos.store(0.f, std::memory_order_relaxed);
 	sDbgBarSize.store(0.f, std::memory_order_relaxed);
 	sDbgBarFollow.store(0, std::memory_order_relaxed);
+	publishBarTouches(0, 0.f, 0.f);
 }
 
 static bool setupWithRetry(Trill& t, Trill::Device dev, uint8_t addr) {
@@ -441,7 +460,7 @@ static void pollSquare() {
 	sSquareTouch.store(touch, std::memory_order_release);
 }
 
-static bool barPinchFromTouches(unsigned nt, float& dist) {
+static int barTopTwoTouches(unsigned nt, float& p0, float& p1, float* pinchDist) {
 	int i0 = -1;
 	int i1 = -1;
 	float s0 = -1.f;
@@ -460,12 +479,15 @@ static bool barPinchFromTouches(unsigned nt, float& dist) {
 			i1 = (int)i;
 		}
 	}
-	if (i0 < 0 || i1 < 0)
-		return false;
-	const float p0 = sBar.touchLocation((unsigned)i0);
-	const float p1 = sBar.touchLocation((unsigned)i1);
-	dist = std::fabs(p0 - p1);
-	return dist >= Cfg::kBarPinchMinSep;
+	if (i0 < 0)
+		return 0;
+	p0 = sBar.touchLocation((unsigned)i0);
+	if (i1 < 0)
+		return 1;
+	p1 = sBar.touchLocation((unsigned)i1);
+	if (pinchDist)
+		*pinchDist = std::fabs(p0 - p1);
+	return 2;
 }
 
 static void pollBar(bool& touching, float& intensity) {
@@ -496,26 +518,43 @@ static void pollBar(bool& touching, float& intensity) {
 		sDbgBarPos.store(0.f, std::memory_order_relaxed);
 		sDbgBarSize.store(0.f, std::memory_order_relaxed);
 		sDbgBarFollow.store(0, std::memory_order_relaxed);
+		publishBarTouches(0, 0.f, 0.f);
 		return;
 	}
 
+	float topP0 = 0.f;
+	float topP1 = 0.f;
 	float pinchDist = 0.f;
-	if (nt >= 2 && barPinchFromTouches(nt, pinchDist)) {
-		if (sBarMode != kBarDensity) {
-			sBarMode = kBarDensity;
-			sPinchRef = pinchDist;
-			sLastPinchE = 0.f;
-			sReleaseFrames = 0;
-			sFillOnsetPolls = 0;
+	const int nValid = barTopTwoTouches(nt, topP0, topP1, &pinchDist);
+	if (nValid >= 2) {
+		publishBarTouches(2, topP0, topP1);
+		if (pinchDist >= Cfg::kBarPinchMinSep) {
+			if (sBarMode != kBarDensity) {
+				sBarMode = kBarDensity;
+				sPinchRef = pinchDist;
+				sLastPinchE = 0.f;
+				sReleaseFrames = 0;
+				sFillOnsetPolls = 0;
+			}
+			float e = (pinchDist - sPinchRef) / Cfg::kBarPinchRange;
+			e = std::max(-1.f, std::min(1.f, e));
+			sLastPinchE = e;
+			publishBar(false, sRateZone, 0.f, false, true, e);
+			return;
 		}
-		float e = (pinchDist - sPinchRef) / Cfg::kBarPinchRange;
-		e = std::max(-1.f, std::min(1.f, e));
-		sLastPinchE = e;
-		publishBar(false, sRateZone, 0.f, false, true, e);
-		return;
+		if (sBarMode == kBarDensity) {
+			publishBar(false, sRateZone, 0.f, false, true, sLastPinchE);
+			return;
+		}
 	}
 
 	if (sBarMode == kBarDensity) {
+		if (nValid >= 2)
+			publishBarTouches(2, topP0, topP1);
+		else if (nValid == 1)
+			publishBarTouches(1, topP0, 0.f);
+		else
+			publishBarTouches(0, 0.f, 0.f);
 		publishBar(false, sRateZone, 0.f, false, true, sLastPinchE);
 		return;
 	}
@@ -544,6 +583,10 @@ static void pollBar(bool& touching, float& intensity) {
 			}
 		}
 	}
+	if (pick < 0) {
+		publishBarTouches(0, 0.f, 0.f);
+		return;
+	}
 	const float pos = sBar.touchLocation((unsigned)pick);
 	const float size = sBar.touchSize((uint8_t)pick);
 	sDbgBarFollow.store((uint8_t)pick, std::memory_order_relaxed);
@@ -552,8 +595,12 @@ static void pollBar(bool& touching, float& intensity) {
 		sFillOnsetPolls = 0;
 		sDbgBarPos.store(0.f, std::memory_order_relaxed);
 		sDbgBarSize.store(0.f, std::memory_order_relaxed);
+		publishBarTouches(0, 0.f, 0.f);
 		return;
 	}
+
+	if (nValid < 2)
+		publishBarTouches(1, pos, 0.f);
 
 	if (sBarMode == kBarIdle) {
 		sFillOnsetPolls++;
@@ -699,6 +746,15 @@ BarSample TrillInput::bar() const {
 	const int macroU8 = (int)((v >> 14) & 0xFFu);
 	b.densityMacro = ((float)macroU8 - 128.f) / 127.f;
 	return b;
+}
+
+BarTouches TrillInput::barTouches() const {
+	const uint32_t v = sBarTouches.load(std::memory_order_acquire);
+	BarTouches t;
+	t.count = (int)(v & 3u);
+	t.pos[0] = ((v >> 8) & 0xFFu) / 255.f;
+	t.pos[1] = ((v >> 16) & 0xFFu) / 255.f;
+	return t;
 }
 
 bool TrillInput::anyTouch() const {

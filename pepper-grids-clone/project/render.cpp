@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "BarLeds.h"
 #include "DensityMacro.h"
 #include "FillBar.h"
 #include "GridsEngine.h"
@@ -28,6 +29,7 @@ static GuiView gGui;
 static int gLedFlash[PepperPins::kNumParts] = {};
 static bool gLeds[10] = {};
 static bool gLedDirty = false;
+static BarTouches gBarTouches;
 static int gHhOpenStep = -1;
 
 static void setLed(int i, bool on) {
@@ -165,6 +167,7 @@ void render(BelaContext* context, void*) {
 				gTrill.publishToPattern(pad);
 				gPattern.update(pad, gKnobs.knob(4), gKnobs.knob(5), context);
 				gFill.setBar(gTrill.bar());
+				gBarTouches = gTrill.barTouches();
 				trillPolled = true;
 			}
 
@@ -260,6 +263,14 @@ void render(BelaContext* context, void*) {
 		setLed(7, s >= 24);
 		setLed(8, gTrill.fillActive());
 		setLed(9, gClock.running());
+
+		if (gBarTouches.count > 0) {
+			const int a = barPosToLed(gBarTouches.pos[0]);
+			const int b = gBarTouches.count == 2
+				? barPosToLed(gBarTouches.pos[1]) : -1;
+			for (int i = 0; i < 10; ++i)
+				setLed(i, i == a || i == b);
+		}
 
 		if (n == 0) {
 #if GRIDS_GUI

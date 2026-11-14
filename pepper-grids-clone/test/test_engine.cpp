@@ -1,3 +1,4 @@
+#include "BarLeds.h"
 #include "DensityMacro.h"
 #include "FillRamp.h"
 #include "GridsEngine.h"
@@ -231,6 +232,14 @@ static void test_density_macro() {
 	}
 }
 
+static void test_bar_pos_to_led() {
+	assert(barPosToLed(0.f) == 0);
+	assert(barPosToLed(1.f) == 9);
+	assert(barPosToLed(0.55f) == 5);
+	assert(barPosToLed(-0.5f) == 0);
+	assert(barPosToLed(1.5f) == 9);
+}
+
 static void test_fill_ramp() {
 	assert(fillRamp01(0.f) == 0.f);
 	assert(fillRamp01(kFillRampSteps) == 1.f);
@@ -366,6 +375,7 @@ int main() {
 	test_fm_density_zero_silent();
 	test_fm_mirrored_level();
 	test_density_macro();
+	test_bar_pos_to_led();
 	test_fill_ramp();
 	test_hh_gap_matches_ticks();
 	test_hh_open_step();

@@ -52,6 +52,8 @@ Set `GRIDS_TRILL_DEBUG` to `0` when done.
 
 **Bar density macro:** Two fingers on the Bar (minimum separation `kBarPinchMinSep` in [TrillInput.cpp](project/TrillInput.cpp)) enter **density mode**. Pinch (closer) thins all four voices evenly; spread (wider) makes them busier, relative to the finger distance at touchdown. Knob mix is preserved (silent voices stay silent). Lift both fingers to snap back to knob densities. One-finger holds still need ~25 ms (`kBarFillOnsetUs`) before fills engage so a quick second finger does not flicker a fill.
 
+**Bar LED display:** While any finger is on the Bar, all ten Pepper LEDs show touch position instead of run/fill/status: one finger lights a single LED that tracks left/right along the row; two fingers light two LEDs at each contact so the gap between lit LEDs matches finger spacing. The display follows live touch (not the fill release tail). If the LED direction is opposite the Bar, set `kBarLedInvert` to `true` in `namespace Cfg` in [TrillInput.cpp](project/TrillInput.cpp).
+
 **Bar fills:** While the Bar is held with one finger, alternating snare and hi-hat hits fire at the zone rate. Snare loudness **crescendos** over about one bar (`kFillRampSteps` in [FillRamp.h](project/FillRamp.h)) with a slight end-weighted curve; light pressure adds a small boost on top. Fill hi-hats stay at `hhAccentBase` (no ramp) so the snare build stays forward. Releasing the Bar resets the ramp. Firm pressure still triggers kick drop (BD muted).
 
 ### I2C errors
@@ -77,6 +79,7 @@ If errors persist:
 - [ ] Knob 7: Feel (CCW half = swing; CW half = looseness + chaos)
 - [ ] Buttons: run/stop, reset, clear Square latch, hold freeze
 - [ ] Bar: all rate zones; light touch keeps BD; hard press kick drop
+- [ ] Bar: one finger — one LED tracks along the row; two fingers — two LEDs show spacing
 - [ ] Bar: two-finger pinch thins, spread fattens; release restores knob densities
 - [ ] Square: latch, knob takeover, palm ignored
 - [ ] FM drum: **CV 3** → trigger on your FM voice
