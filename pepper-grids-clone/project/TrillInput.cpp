@@ -762,3 +762,5 @@ bool TrillInput::anyTouch() const {
 		|| (sSquareEverOk.load(std::memory_order_acquire)
 			&& sSquareTouch.load() != 0);
 }
+
+bool TrillInput::squareLinked() const { return sSquareLink; }

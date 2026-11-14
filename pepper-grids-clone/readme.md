@@ -54,6 +54,8 @@ Set `GRIDS_TRILL_DEBUG` to `0` when done.
 
 **Bar LED display:** While any finger is on the Bar, all ten Pepper LEDs show touch position instead of run/fill/status: one finger lights a single LED that tracks left/right along the row; two fingers light two LEDs at each contact so the gap between lit LEDs matches finger spacing. The display follows live touch (not the fill release tail). If the LED direction is opposite the Bar, set `kBarLedInvert` to `true` in `namespace Cfg` in [TrillInput.cpp](project/TrillInput.cpp).
 
+**Square LED display:** While the Bar is idle, touching the Square replaces the step-quarter LEDs (indices 4–7) with a **2×2 map**: one lit LED tracks which quadrant of the pad you are in (low/high X and Y). LED 8 stays solid while the Square owns the map after you lift your finger (latched); Bar fill still wins LED 8 while the Bar is held. If the Square drops off I2C, LED 8 blinks (~2 Hz) until it recovers. Bar touch still overrides all LEDs.
+
 **Bar fills:** While the Bar is held with one finger, alternating snare and hi-hat hits fire at the zone rate. Snare loudness **crescendos** over about one bar (`kFillRampSteps` in [FillRamp.h](project/FillRamp.h)) with a slight end-weighted curve; light pressure adds a small boost on top. Fill hi-hats stay at `hhAccentBase` (no ramp) so the snare build stays forward. Releasing the Bar resets the ramp. Firm pressure still triggers kick drop (BD muted).
 
 ### I2C errors
@@ -81,7 +83,7 @@ If errors persist:
 - [ ] Bar: all rate zones; light touch keeps BD; hard press kick drop
 - [ ] Bar: one finger — one LED tracks along the row; two fingers — two LEDs show spacing
 - [ ] Bar: two-finger pinch thins, spread fattens; release restores knob densities
-- [ ] Square: latch, knob takeover, palm ignored
+- [ ] Square: latch, knob takeover, palm ignored; LEDs 4–7 track quadrant while touching; LED 8 latched or blinks on I2C loss
 - [ ] FM drum: **CV 3** → trigger on your FM voice
 - [ ] Hi-hat: **CV 6** level on every hit (`hhAccentBase` / `hhAccentPeak`); **CV 7** → decay (one open hat per bar; tune `hhDecayOpen`)
 - [ ] No underruns; CPU stable

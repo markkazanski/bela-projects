@@ -275,6 +275,23 @@ void render(BelaContext* context, void*) {
 		setLed(8, gTrill.fillActive());
 		setLed(9, gClock.running());
 
+		if (gBarTouches.count == 0) {
+			PadSample squarePad;
+			gTrill.publishToPattern(squarePad);
+			if (squarePad.touching) {
+				const int q = squarePosToQuadLed(squarePad.x, squarePad.y);
+				for (int i = 4; i <= 7; ++i)
+					setLed(i, i == q);
+			} else if (!gTrill.squareLinked()) {
+				const uint32_t ms = (context->audioSampleRate > 0.f)
+					? (uint32_t)(context->audioFramesElapsed
+						/ (context->audioSampleRate * 0.001f))
+					: 0u;
+				setLed(8, (ms / 250u) % 2u == 0u);
+			} else if (gPattern.squareActive() && !gTrill.fillActive())
+				setLed(8, true);
+		}
+
 		if (gBarTouches.count > 0) {
 			const int a = barPosToLed(gBarTouches.pos[0]);
 			const int b = gBarTouches.count == 2

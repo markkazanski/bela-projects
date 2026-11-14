@@ -240,6 +240,15 @@ static void test_bar_pos_to_led() {
 	assert(barPosToLed(1.5f) == 9);
 }
 
+static void test_square_pos_to_quad_led() {
+	assert(squarePosToQuadLed(0.f, 0.f) == 4);
+	assert(squarePosToQuadLed(1.f, 0.f) == 5);
+	assert(squarePosToQuadLed(0.f, 1.f) == 6);
+	assert(squarePosToQuadLed(1.f, 1.f) == 7);
+	assert(squarePosToQuadLed(0.25f, 0.25f) == 4);
+	assert(squarePosToQuadLed(0.75f, 0.75f) == 7);
+}
+
 static void test_fill_ramp() {
 	assert(fillRamp01(0.f) == 0.f);
 	assert(fillRamp01(kFillRampSteps) == 1.f);
@@ -376,6 +385,7 @@ int main() {
 	test_fm_mirrored_level();
 	test_density_macro();
 	test_bar_pos_to_led();
+	test_square_pos_to_quad_led();
 	test_fill_ramp();
 	test_hh_gap_matches_ticks();
 	test_hh_open_step();

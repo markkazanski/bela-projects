@@ -34,4 +34,5 @@ public:
 
 	bool anyTouch() const;
 	bool fillActive() const { return bar().touching; }
+	bool squareLinked() const;
 };
