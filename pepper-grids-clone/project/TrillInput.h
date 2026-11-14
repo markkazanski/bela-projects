@@ -5,7 +5,7 @@
 #include <cstdint>
 
 #ifndef GRIDS_TRILL_DEBUG
-#define GRIDS_TRILL_DEBUG 1
+#define GRIDS_TRILL_DEBUG 0
 #endif
 
 struct BarSample {
