@@ -1,0 +1,19 @@
+name: pepper-grids-clone-tests
+on:
+  push:
+    paths:
+      - "pepper-grids-clone/**"
+  pull_request:
+    paths:
+      - "pepper-grids-clone/**"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure and test
+        working-directory: pepper-grids-clone
+        run: |
+          cmake -S test -B build
+          cmake --build build
+          ctest --test-dir build --output-on-failure
