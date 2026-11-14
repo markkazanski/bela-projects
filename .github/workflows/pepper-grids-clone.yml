@@ -16,6 +16,7 @@ jobs:
       - name: Configure and test
         working-directory: pepper-grids-clone
         run: |
+          rm -rf build-ci
           cmake -S test -B build-ci
           cmake --build build-ci
           ctest --test-dir build-ci --output-on-failure
