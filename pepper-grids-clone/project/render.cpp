@@ -22,7 +22,7 @@ static TrillInput gTrill;
 static FillBar gFill;
 static GuiView gGui;
 
-static int gLedFlash[3] = {};
+static int gLedFlash[PepperPins::kNumParts] = {};
 static bool gLeds[10] = {};
 static bool gLedDirty = false;
 
@@ -58,6 +58,10 @@ static void renderHwTest(BelaContext* context) {
 	if (sHoldFrames == 0)
 		sHoldFrames = (int)(context->analogSampleRate * 0.5f);
 	const int pulseW = PepperPins::msToFrames(context->analogSampleRate, 5.f);
+	const int accentLead = PepperPins::msToFrames(context->analogSampleRate, 1.f);
+	const int accentTail = PepperPins::msToFrames(context->analogSampleRate, 2.f);
+	const float audioHi = PepperPins::gCalib.audioTrigHigh;
+	const float cvAccHi = PepperPins::gCalib.fmAccentCvHigh;
 
 	for (unsigned n = 0; n < digN; ++n) {
 		for (unsigned b = 0; b < 4; ++b) {
@@ -78,7 +82,7 @@ static void renderHwTest(BelaContext* context) {
 			sPhase++;
 			if (sPhase >= sHoldFrames) {
 				sPhase = 0;
-				sActiveOut = (sActiveOut + 1) % 8;
+				sActiveOut = (sActiveOut + 1) % 10;
 				rt_printf("knobs k0=%.2f k1=%.2f k2=%.2f k3=%.2f k4=%.2f k5=%.2f k6=%.2f k7=%.2f\n",
 					gKnobs.knob(0), gKnobs.knob(1), gKnobs.knob(2), gKnobs.knob(3),
 					gKnobs.knob(4), gKnobs.knob(5), gKnobs.knob(6), gKnobs.knob(7));
@@ -87,10 +91,21 @@ static void renderHwTest(BelaContext* context) {
 			const float hi = PepperPins::gCalib.trigHigh;
 			for (unsigned ch = 0; ch < 8; ++ch)
 				analogWriteOnce(context, aFrame, ch, 0.f);
-			if (pulseOn)
+			if (pulseOn && sActiveOut < 8)
 				analogWriteOnce(context, aFrame, sActiveOut, hi);
+			if (sActiveOut == 9 && sPhase < accentLead + pulseW + accentTail)
+				analogWriteOnce(context, aFrame, PepperPins::kOutFmAccent, cvAccHi);
 			for (int i = 0; i < 10; ++i)
 				setLed(i, i == sActiveOut);
+		}
+		const bool fmTrig = sActiveOut == 8
+			? (sPhase < pulseW)
+			: (sActiveOut == 9
+				&& sPhase >= accentLead && sPhase < accentLead + pulseW);
+		const float trig = fmTrig ? audioHi : 0.f;
+		if ((int)n < context->audioFrames) {
+			for (unsigned ch = 0; ch < PepperPins::kNumAudioOuts; ++ch)
+				audioWrite(context, (int)n, (int)ch, trig);
 		}
 		if (n == 0)
 			applyLeds(context, n);
@@ -108,12 +123,16 @@ bool setup(BelaContext* context, void*) {
 		PepperPins::msToFrames(context->analogSampleRate, 5.f);
 	PepperPins::gCalib.trigGapFrames =
 		PepperPins::msToFrames(context->analogSampleRate, 1.f);
+	PepperPins::gCalib.fmAccentLeadFrames =
+		PepperPins::msToFrames(context->analogSampleRate, 1.f);
+	PepperPins::gCalib.fmAccentTailFrames =
+		PepperPins::msToFrames(context->analogSampleRate, 2.f);
 
 	if (!gKnobs.setup(context))
 		return false;
 
 #if GRIDS_HW_TEST
-	rt_printf("pepper-grids-clone HW TEST (CV/LED sweep, knob print, raw buttons)\n");
+	rt_printf("pepper-grids-clone HW TEST (CV/LED sweep, FM audio+CV7, knob print, raw buttons)\n");
 	return true;
 #else
 	gClock.setup(context->analogSampleRate);
@@ -167,7 +186,11 @@ void render(BelaContext* context, void*) {
 				gClock.requestReset();
 				gEngine.resetPattern();
 			}
-			if (gKnobs.buttonRising(2))
+			static bool btn2Last = false;
+			const bool btn2 = gKnobs.buttonHeld(2);
+			gKnobs.onButton2Shift(gKnobs.buttonRising(2), btn2Last && !btn2, btn2);
+			btn2Last = btn2;
+			if (gKnobs.consumeClearLatchRequest())
 				gPattern.clearLatch();
 			const bool freezeBtn = gKnobs.buttonHeld(3);
 			if (freezeBtn && !freezeBtnLast)
@@ -191,26 +214,25 @@ void render(BelaContext* context, void*) {
 				if (barChaos.touching)
 					chaos01 = std::min(1.f, chaos01 + barChaos.size * 0.35f);
 				in.chaos = (uint8_t)(chaos01 * 255.f + 0.5f);
-				for (int p = 0; p < 3; ++p)
-					in.density[p] = (uint8_t)(gKnobs.knob(2 + p) * 255.f + 0.5f);
+				for (int p = 0; p < PepperPins::kNumParts; ++p)
+					in.density[p] = gKnobs.partDensity(p);
 				const BarSample bar = gTrill.bar();
 				in.muteBd = bar.touching && bar.kickDrop;
 				in.muteSd = bar.touching;
 				in.muteHh = bar.touching;
+				in.muteFm = bar.touching;
 
 				StepResult res = gEngine.tick(step, in);
 				const int swing = gClock.swingDelayFrames();
-				for (int p = 0; p < 3; ++p) {
+				for (int p = 0; p < PepperPins::kNumParts; ++p) {
 					if (!res.trig[p])
 						continue;
 					const float acc = res.level[p] / 255.f;
-					gTriggers.scheduleHit(p, swing, acc, res.accent[p]);
-					gLedFlash[p] = 900;
+					gTriggers.scheduleHit((unsigned)p, swing, acc, res.accent[p]);
+					gLedFlash[p] = (p == PepperPins::kFm) ? 700 : 900;
 				}
 
 				gTriggers.pulseClock();
-				if (step == 0)
-					gTriggers.pulseReset();
 				gClock.afterTick();
 			}
 
@@ -219,17 +241,22 @@ void render(BelaContext* context, void*) {
 			gTriggers.write(context, aFrame);
 		}
 
-		for (int p = 0; p < 3; ++p) {
+		if ((int)n < context->audioFrames)
+			gTriggers.writeAudio(context, n);
+
+		for (int p = 0; p < PepperPins::kNumParts; ++p) {
 			if (gLedFlash[p] > 0)
 				gLedFlash[p]--;
-			setLed(p, gLedFlash[p] > 0);
+			if (p < 3)
+				setLed(p, gLedFlash[p] > 0);
+			else if (p == PepperPins::kFm)
+				setLed(3, gLedFlash[p] > 0);
 		}
 		const int s = gClock.step();
 		setLed(4, s < 8);
 		setLed(5, s >= 8 && s < 16);
 		setLed(6, s >= 16 && s < 24);
 		setLed(7, s >= 24);
-		setLed(3, gTrill.anyTouch());
 		setLed(8, gTrill.fillActive());
 		setLed(9, gClock.running());
 
@@ -239,11 +266,11 @@ void render(BelaContext* context, void*) {
 			float chaos01 = gKnobs.knob(5);
 			if (bar.touching)
 				chaos01 = std::min(1.f, chaos01 + bar.size * 0.35f);
-			uint8_t density[3];
-			for (int p = 0; p < 3; ++p)
-				density[p] = (uint8_t)(gKnobs.knob(2 + p) * 255.f + 0.5f);
-			uint8_t pert[3];
-			for (int p = 0; p < 3; ++p)
+			uint8_t density[kEngineVoices];
+			for (int p = 0; p < kEngineVoices; ++p)
+				density[p] = gKnobs.partDensity(p);
+			uint8_t pert[kEngineVoices];
+			for (int p = 0; p < kEngineVoices; ++p)
 				pert[p] = gEngine.perturbation(p);
 			const int clk = gClock.step();
 			GuiSnapshot::publish(gPattern.mapX(), gPattern.mapY(), density, pert, clk,
@@ -251,7 +278,7 @@ void render(BelaContext* context, void*) {
 				gEngine.frozen(), bar.touching, bar.kickDrop, gPattern.squareActive(),
 				gKnobs.tempoBpm(), (uint8_t)(gKnobs.knob(7) * 255.f + 0.5f),
 				(uint8_t)(chaos01 * 255.f + 0.5f), bar.touching && bar.kickDrop,
-				bar.touching, bar.touching);
+				bar.touching, bar.touching, bar.touching);
 #endif
 			applyLeds(context, n);
 		}

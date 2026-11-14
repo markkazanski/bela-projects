@@ -1,6 +1,6 @@
 # Pepper Grids clone
 
-Independent Bela + Pepper project: 3-channel Mutable Instruments Grids-style sequencer (BD / SD / HH). Control with Pepper knobs and buttons, Trill Square (pattern X/Y) and Trill Bar (fills). **Internal clock only** — CV input jacks are not used (Eurorack +12 V, knob-only mode).
+Independent Bela + Pepper project: Grids-style sequencer (BD / SD / HH) plus a 4th FM voice driven from the mirrored map. Control with Pepper knobs and buttons, Trill Square (pattern X/Y) and Trill Bar (fills). **Internal clock only** — CV input jacks are not used (Eurorack +12 V, knob-only mode).
 
 ## Deploy
 
@@ -14,7 +14,7 @@ Open `pepper-grids-clone` in the Bela IDE and run.
 
 ## Pattern view (browser)
 
-While the project is running, open **http://bela.local/gui** (or use the **GUI** button in the Bela IDE). The view is read-only: a **5×5 map** with the current pattern position and a **3×32** grid (BD / SD / HH) showing step levels, density gating, accents, playhead, freeze loop, and Bar fill state. Set `GRIDS_GUI` to `0` in [PepperPins.h](project/PepperPins.h) to disable the GUI task.
+While the project is running, open **http://bela.local/gui** (or use the **GUI** button in the Bela IDE). The view is read-only: a **5×5 map** with the current pattern position and a **4×32** grid (BD / SD / HH / FM) showing step levels, density gating, accents, playhead, freeze loop, and Bar fill state. Set `GRIDS_GUI` to `0` in [PepperPins.h](project/PepperPins.h) to disable the GUI task.
 
 ## Hardware bring-up
 
@@ -23,6 +23,9 @@ While the project is running, open **http://bela.local/gui** (or use the **GUI**
 In [PepperPins.h](project/PepperPins.h) set `GRIDS_HW_TEST` to `1`, deploy, run.
 
 - CV outs 0–7 pulse in order (~0.5 s each); the LED with the same index should flash. Wrong order → fix `kLedPins[]`.
+- Sweep index **8**: FM trigger on **both** audio outs (no accent) — quiet hit.
+- Sweep index **9**: same audio trigger **plus CV 7 high** (~1 ms before and through the pulse) — loud accented hit. Patch **audio R → FM TRIGGER**, **CV 7 → FM ACCENT** to hear the difference.
+- Adjust `audioTrigHigh` / `fmAccentCvHigh` in [PepperPins.h](project/PepperPins.h) if levels are low.
 - Console prints `k0..k7` each step; knobs should read ~0.00 CCW and ~1.00 CW on +12 V.
 - Button lines show `button N raw=0|1`; if press appears as `low`, set `kButtonActiveHigh` to `false`.
 
@@ -55,11 +58,12 @@ A single failed read (`Remote I/O error`) used to disable the Trill library unti
 
 ### 3. Normal run checklist
 
-- [ ] Knob 6 centre ≈ 140 BPM; CV 6 = 16ths, CV 7 pulses on step 0
-- [ ] Density knobs CCW = silent drum
-- [ ] Buttons: run/stop, reset, clear latch, hold freeze
+- [ ] Knob 6 centre ≈ 140 BPM; CV 6 = clock 16ths; CV 7 high on accented FM hits
+- [ ] Density knobs CCW = silent drum; FM density follows HH knob (4) unless unlinked
+- [ ] Buttons: run/stop, reset, clear latch / FM shift, hold freeze
 - [ ] Bar: all rate zones; light touch keeps BD; hard press kick drop
 - [ ] Square: latch, knob takeover, palm ignored
+- [ ] FM drum: audio R (or L) → TRIGGER, CV 7 → ACCENT
 - [ ] No underruns; CPU stable
 
 Record any pin or polarity changes in the `PepperPins.h` comment block.
@@ -70,6 +74,7 @@ Record any pin or polarity changes in the `PepperPins.h` comment block.
 |------|----------|
 | 0 / 1 | Map X / Y |
 | 2 / 3 / 4 | BD / SD / HH density (CCW = silent) |
+| 4 (shift) | Hold button 2 + turn: FM density (unlinks from HH); HH frozen while held |
 | 5 | Chaos |
 | 6 | Tempo 40–240 BPM |
 | 7 | Swing |
@@ -78,7 +83,7 @@ Record any pin or polarity changes in the `PepperPins.h` comment block.
 |--------|----------|
 | 0 | Run / stop (toggle) |
 | 1 | Reset pattern |
-| 2 | Clear Square latch |
+| 2 | Hold + knob 4: FM density layer; **release without moving knob** clears Square latch |
 | 3 | Hold: freeze 4-step loop |
 
 | CV out | Signal |
@@ -86,7 +91,15 @@ Record any pin or polarity changes in the `PepperPins.h` comment block.
 | 0 / 1 / 2 | BD / SD / HH trigger |
 | 3 / 4 / 5 | BD / SD / HH accent |
 | 6 | Clock out (16ths) |
-| 7 | Reset pulse on step 0 |
+| 7 | FM drum accent gate (+5 V style; `fmAccentCvHigh`, lead/tail in [PepperPins.h](project/PepperPins.h)) |
+
+| Audio out | Signal |
+|-----------|--------|
+| 0 / 1 | FM drum trigger (same pulse on L and R; AC-coupled; `audioTrigHigh`) |
+
+**FM drum patching:** audio out **R** → TRIGGER (use whichever channel fires on your unit), **CV 7** → ACCENT. Accented sequencer steps should sound louder; unaccented steps stay quieter.
+
+FM pattern lane reads the Grids map at the mirrored position `(255−X, 255−Y)` using snare (SD) node data — related groove, opposite corner of the pad.
 
 ## Trill Hub
 

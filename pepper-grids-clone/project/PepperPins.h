@@ -21,16 +21,19 @@
 
 namespace PepperPins {
 
-enum Part { kBd = 0, kSd = 1, kHh = 2, kNumParts = 3 };
+enum Part { kBd = 0, kSd = 1, kHh = 2, kFm = 3, kNumParts = 4 };
+constexpr unsigned kNumCvParts = 3;
 
 constexpr bool kButtonActiveHigh = true;
 constexpr unsigned kLedPins[10] = {6, 7, 10, 2, 3, 0, 1, 4, 5, 8};
 constexpr unsigned kButtonPins[4] = {15, 14, 13, 12};
 
-constexpr unsigned kOutTrig[kNumParts] = {0, 1, 2};
-constexpr unsigned kOutAccent[kNumParts] = {3, 4, 5};
+constexpr unsigned kOutTrig[kNumCvParts] = {0, 1, 2};
+constexpr unsigned kOutAccent[kNumCvParts] = {3, 4, 5};
 constexpr unsigned kOutClock = 6;
-constexpr unsigned kOutReset = 7;
+constexpr unsigned kOutFmAccent = 7;
+
+constexpr unsigned kNumAudioOuts = 2;
 
 constexpr int kStepsPerPattern = 32;
 
@@ -38,6 +41,10 @@ struct Calib {
 	float trigHigh = 0.85f;
 	float accentLow = 0.15f;
 	float accentHigh = 0.85f;
+	float audioTrigHigh = 1.0f;
+	float fmAccentCvHigh = 1.0f;
+	int fmAccentLeadFrames = 22;
+	int fmAccentTailFrames = 44;
 	int trigPulseFrames = 44;   // set in setup (~5 ms @ 22.05 kHz)
 	int trigGapFrames = 22;   // ~1 ms low before re-fire
 };

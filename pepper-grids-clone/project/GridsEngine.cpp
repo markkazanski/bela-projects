@@ -4,10 +4,11 @@
 namespace {
 constexpr int kSteps = Patterns::kSteps;
 constexpr int kAccentThreshold = 192;
+constexpr int kFmVoice = 3;
 } // namespace
 
 void GridsEngine::resetPattern() {
-	for (int p = 0; p < kEngineParts; ++p)
+	for (int p = 0; p < kEngineVoices; ++p)
 		mPerturbation[p] = 0;
 }
 
@@ -36,13 +37,19 @@ int GridsEngine::playStep(int clockStep) const {
 }
 
 uint8_t GridsEngine::perturbation(int part) const {
-	if (part < 0 || part >= kEngineParts)
+	if (part < 0 || part >= kEngineVoices)
 		return 0;
 	return mPerturbation[part];
 }
 
 uint8_t GridsEngine::levelAt(uint8_t step, uint8_t part, uint8_t x, uint8_t y) {
 	return readDrumMap(step, part, x, y);
+}
+
+uint8_t GridsEngine::fmLevelAt(uint8_t step, uint8_t x, uint8_t y) {
+	const uint8_t mx = (uint8_t)(255 - x);
+	const uint8_t my = (uint8_t)(255 - y);
+	return readDrumMap(step, (uint8_t)kFmSourcePart, mx, my);
 }
 
 uint8_t GridsEngine::readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t y) {
@@ -72,12 +79,13 @@ StepResult GridsEngine::tick(int clockStep, const EngineInputs& in) {
 
 	if (clockStep == 0) {
 		const uint8_t randomness = (uint8_t)(in.chaos >> 2);
-		for (int p = 0; p < kEngineParts; ++p)
+		for (int p = 0; p < kEngineVoices; ++p)
 			mPerturbation[p] = mRng.mulShift8(mRng.nextU8(), randomness);
 	}
 
-	for (int p = 0; p < kEngineParts; ++p) {
-		if ((p == 0 && in.muteBd) || (p == 1 && in.muteSd) || (p == 2 && in.muteHh)) {
+	for (int p = 0; p < kEngineVoices; ++p) {
+		if ((p == 0 && in.muteBd) || (p == 1 && in.muteSd) || (p == 2 && in.muteHh)
+			|| (p == kFmVoice && in.muteFm)) {
 			out.level[p] = 0;
 			continue;
 		}
@@ -85,7 +93,11 @@ StepResult GridsEngine::tick(int clockStep, const EngineInputs& in) {
 			out.level[p] = 0;
 			continue;
 		}
-		uint8_t level = readDrumMap((uint8_t)playStep, (uint8_t)p, in.mapX, in.mapY);
+		uint8_t level;
+		if (p == kFmVoice)
+			level = fmLevelAt((uint8_t)playStep, in.mapX, in.mapY);
+		else
+			level = readDrumMap((uint8_t)playStep, (uint8_t)p, in.mapX, in.mapY);
 		if (level == 0)
 			continue;
 		if (level < 255 - mPerturbation[p])

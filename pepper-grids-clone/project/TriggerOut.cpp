@@ -20,7 +20,8 @@ void TriggerOut::tryStartPulse(unsigned part) {
 	}
 	mPulseLeft[part] = adaptivePulseWidth();
 	mAccentHeld[part] = mPendingAccent[part];
-	mAccentOn[part] = mPendingHasAccent[part];
+	if (part != PepperPins::kFm)
+		mAccentOn[part] = mPendingHasAccent[part];
 }
 
 void TriggerOut::scheduleHit(unsigned part, int delayFrames, float accent01, bool hasAccent) {
@@ -33,10 +34,6 @@ void TriggerOut::pulseClock(int frames) {
 	mClockPulse = frames > 0 ? frames : adaptivePulseWidth();
 }
 
-void TriggerOut::pulseReset(int frames) {
-	mResetPulse = frames > 0 ? frames : adaptivePulseWidth();
-}
-
 void TriggerOut::fireNow(unsigned part, float accent01, bool hasAccent) {
 	mPendingAccent[part] = accent01;
 	mPendingHasAccent[part] = hasAccent;
@@ -44,7 +41,15 @@ void TriggerOut::fireNow(unsigned part, float accent01, bool hasAccent) {
 }
 
 void TriggerOut::process(int analogFrames) {
+	const unsigned fm = PepperPins::kFm;
+	const int lead = PepperPins::gCalib.fmAccentLeadFrames;
+	const int tail = PepperPins::gCalib.fmAccentTailFrames;
+
 	for (int n = 0; n < analogFrames; ++n) {
+		if (mPendingHasAccent[fm] && mFmAccentLeft == 0 && mDelayLeft[fm] > 0
+			&& mDelayLeft[fm] <= lead)
+			mFmAccentLeft = mDelayLeft[fm] + adaptivePulseWidth() + tail;
+
 		for (unsigned p = 0; p < PepperPins::kNumParts; ++p) {
 			if (mDelayLeft[p] > 0) {
 				mDelayLeft[p]--;
@@ -55,8 +60,10 @@ void TriggerOut::process(int analogFrames) {
 			}
 			if (mPulseLeft[p] > 0) {
 				mPulseLeft[p]--;
-				if (mPulseLeft[p] == 0)
-					mAccentOn[p] = false;
+				if (mPulseLeft[p] == 0) {
+					if (p != fm)
+						mAccentOn[p] = false;
+				}
 			}
 			if (mPendingTrig[p] && mPulseLeft[p] <= 0 && mDelayLeft[p] <= 0) {
 				tryStartPulse(p);
@@ -65,14 +72,14 @@ void TriggerOut::process(int analogFrames) {
 		}
 		if (mClockPulse > 0)
 			mClockPulse--;
-		if (mResetPulse > 0)
-			mResetPulse--;
+		if (mFmAccentLeft > 0)
+			mFmAccentLeft--;
 	}
 }
 
 void TriggerOut::write(BelaContext* ctx, unsigned aFrame) const {
 	const float hi = PepperPins::gCalib.trigHigh;
-	for (unsigned p = 0; p < PepperPins::kNumParts; ++p) {
+	for (unsigned p = 0; p < PepperPins::kNumCvParts; ++p) {
 		const float trig = mPulseLeft[p] > 0 ? hi : 0.f;
 		analogWriteOnce(ctx, aFrame, PepperPins::kOutTrig[p], trig);
 		if (mAccentOn[p]) {
@@ -86,6 +93,14 @@ void TriggerOut::write(BelaContext* ctx, unsigned aFrame) const {
 	}
 	analogWriteOnce(ctx, aFrame, PepperPins::kOutClock,
 		mClockPulse > 0 ? hi : 0.f);
-	analogWriteOnce(ctx, aFrame, PepperPins::kOutReset,
-		mResetPulse > 0 ? hi : 0.f);
+	const float fmAcc = mFmAccentLeft > 0 ? PepperPins::gCalib.fmAccentCvHigh : 0.f;
+	analogWriteOnce(ctx, aFrame, PepperPins::kOutFmAccent, fmAcc);
+}
+
+void TriggerOut::writeAudio(BelaContext* ctx, unsigned audioFrame) const {
+	const unsigned p = PepperPins::kFm;
+	const float hi = PepperPins::gCalib.audioTrigHigh;
+	const float trig = mPulseLeft[p] > 0 ? hi : 0.f;
+	for (unsigned ch = 0; ch < PepperPins::kNumAudioOuts; ++ch)
+		audioWrite(ctx, (int)audioFrame, (int)ch, trig);
 }

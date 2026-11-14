@@ -10,7 +10,7 @@ static EngineInputs fullDensity() {
 	in.mapX = 0;
 	in.mapY = 0;
 	in.chaos = 0;
-	for (int p = 0; p < 3; ++p)
+	for (int p = 0; p < kEngineVoices; ++p)
 		in.density[p] = 255;
 	return in;
 }
@@ -63,6 +63,7 @@ static void test_deterministic() {
 		assert(ra.trig[0] == rb.trig[0]);
 		assert(ra.trig[1] == rb.trig[1]);
 		assert(ra.trig[2] == rb.trig[2]);
+		assert(ra.trig[3] == rb.trig[3]);
 	}
 }
 
@@ -178,6 +179,40 @@ static void test_level_at_matches_tick() {
 	}
 }
 
+static void test_fm_density_zero_silent() {
+	GridsEngine e;
+	e.seed(2);
+	EngineInputs in = fullDensity();
+	in.density[3] = 0;
+	for (int s = 0; s < 32; ++s) {
+		StepResult r = e.tick(s, in);
+		assert(!r.trig[3]);
+	}
+}
+
+static void test_fm_mirrored_level() {
+	GridsEngine e;
+	e.seed(3);
+	EngineInputs in = fullDensity();
+	in.mapX = 80;
+	in.mapY = 160;
+	in.chaos = 0;
+	in.density[3] = 255;
+	for (int s = 0; s < 32; ++s) {
+		StepResult r = e.tick(s, in);
+		const uint8_t raw = GridsEngine::fmLevelAt((uint8_t)s, in.mapX, in.mapY);
+		const uint8_t pert = e.perturbation(3);
+		uint8_t want = raw;
+		if (raw > 0) {
+			if (raw < 255 - pert)
+				want = (uint8_t)(raw + pert);
+			else
+				want = 255;
+		}
+		assert(r.level[3] == want);
+	}
+}
+
 static void test_y_affects_bd() {
 	GridsEngine e;
 	e.seed(1);
@@ -208,6 +243,8 @@ int main() {
 	test_blend_in_range();
 	test_density_monotonic();
 	test_y_affects_bd();
+	test_fm_density_zero_silent();
+	test_fm_mirrored_level();
 	test_level_at_matches_tick();
 	std::printf("All tests passed.\n");
 	return 0;

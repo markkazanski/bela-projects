@@ -8,8 +8,8 @@ const DRUM_MAP = [
   [24, 19, 17, 20, 22],
 ];
 
-const PARTS = ["BD", "SD", "HH"];
-const N_FLOATS = 114;
+const PARTS = ["BD", "SD", "HH", "FM"];
+const N_FLOATS = 149;
 
 function uint32FromFloat(f) {
   const b = new ArrayBuffer(4);
@@ -26,24 +26,26 @@ let state = null;
 
 function parseBuffer(buf) {
   if (!buf || buf.length < N_FLOATS) return null;
-  const levels = buf.slice(0, 96);
+  const levels = buf.slice(0, 128);
   const fireW = [
-    uint32FromFloat(buf[96]),
-    uint32FromFloat(buf[97]),
-    uint32FromFloat(buf[98]),
+    uint32FromFloat(buf[128]),
+    uint32FromFloat(buf[129]),
+    uint32FromFloat(buf[130]),
+    uint32FromFloat(buf[131]),
   ];
   const accW = [
-    uint32FromFloat(buf[99]),
-    uint32FromFloat(buf[100]),
-    uint32FromFloat(buf[101]),
+    uint32FromFloat(buf[132]),
+    uint32FromFloat(buf[133]),
+    uint32FromFloat(buf[134]),
+    uint32FromFloat(buf[135]),
   ];
-  const flags = uint32FromFloat(buf[107]);
+  const flags = uint32FromFloat(buf[141]);
   return {
-    mapX: buf[102],
-    mapY: buf[103],
-    clockStep: Math.round(buf[104]),
-    audibleStep: Math.round(buf[105]),
-    freezeStart: Math.round(buf[106]),
+    mapX: buf[136],
+    mapY: buf[137],
+    clockStep: Math.round(buf[138]),
+    audibleStep: Math.round(buf[139]),
+    freezeStart: Math.round(buf[140]),
     running: (flags & 1) !== 0,
     frozen: (flags & 2) !== 0,
     fill: (flags & 4) !== 0,
@@ -52,10 +54,11 @@ function parseBuffer(buf) {
     muteBd: (flags & 32) !== 0,
     muteSd: (flags & 64) !== 0,
     muteHh: (flags & 128) !== 0,
-    bpm: buf[108],
-    swing: buf[109],
-    chaos: buf[110],
-    density: [buf[111], buf[112], buf[113]],
+    muteFm: (flags & 256) !== 0,
+    bpm: buf[142],
+    swing: buf[143],
+    chaos: buf[144],
+    density: [buf[145], buf[146], buf[147], buf[148]],
     levels,
     fireW,
     accW,
@@ -63,12 +66,12 @@ function parseBuffer(buf) {
 }
 
 function setup() {
-  createCanvas(windowWidth, Math.max(520, windowHeight));
+  createCanvas(windowWidth, Math.max(560, windowHeight));
   textFont("monospace");
 }
 
 function windowResized() {
-  resizeCanvas(windowWidth, Math.max(520, windowHeight));
+  resizeCanvas(windowWidth, Math.max(560, windowHeight));
 }
 
 function draw() {
@@ -119,34 +122,36 @@ function drawMap(x, y, w, h, s) {
   fill(40);
   noStroke();
   rect(x, y, w, h, 6);
-  const side = Math.min(w, h) - 24;
-  const ox = x + (w - side) / 2;
-  const oy = y + 20;
-  const cell = side / 5;
-  textSize(11);
-  textAlign(CENTER, CENTER);
-  for (let j = 0; j < 5; j++) {
-    for (let i = 0; i < 5; i++) {
-      const cx = ox + i * cell;
-      const cy = oy + j * cell;
+  const cell = Math.min(w, h) / (DRUM_MAP.length + 1);
+  const ox = x + (w - cell * DRUM_MAP.length) / 2;
+  const oy = y + (h - cell * DRUM_MAP.length) / 2;
+  for (let j = 0; j < DRUM_MAP.length; j++) {
+    for (let i = 0; i < DRUM_MAP.length; i++) {
+      const cx = ox + i * cell + cell / 2;
+      const cy = oy + j * cell + cell / 2;
+      const id = DRUM_MAP[j][i];
       fill(55);
-      stroke(80);
+      stroke(70);
       strokeWeight(1);
-      rect(cx + 2, cy + 2, cell - 4, cell - 4, 4);
-      fill(200);
+      rect(ox + i * cell, oy + j * cell, cell - 2, cell - 2, 3);
+      fill(120);
       noStroke();
-      text(DRUM_MAP[i][j], cx + cell / 2, cy + cell / 2);
+      textAlign(CENTER, CENTER);
+      textSize(Math.min(14, cell * 0.35));
+      text(id, cx, cy);
     }
   }
-  const mx = ox + cell / 2 + Math.min(4, s.mapX / 64) * cell;
-  const my = oy + cell / 2 + Math.min(4, s.mapY / 64) * cell;
-  const r = 10;
-  noFill();
-  stroke(255, 220, 80);
-  strokeWeight(s.square ? 3 : 1);
-  circle(mx, my, r * 2);
+  const xi = Math.max(0, Math.min(4, Math.floor((s.mapX / 255) * 5)));
+  const yi = Math.max(0, Math.min(4, Math.floor((s.mapY / 255) * 5)));
+  const mx = ox + xi * cell + cell / 2;
+  const my = oy + yi * cell + cell / 2;
+  const r = cell * 0.22;
   if (s.square) {
-    fill(255, 180, 60, 200);
+    fill(255, 200, 80);
+    noStroke();
+    circle(mx, my, r * 1.2);
+  } else {
+    fill(100, 200, 255);
     noStroke();
     circle(mx, my, r * 1.2);
   }
@@ -160,7 +165,7 @@ function drawPattern(x, y, w, h, s) {
   fill(40);
   noStroke();
   rect(x, y, w, h, 6);
-  const laneH = (h - 50) / 3;
+  const laneH = (h - 50) / 4;
   const stepW = (w - 52) / 32;
   const ox = x + 40;
   const oy = y + 28;
@@ -169,12 +174,13 @@ function drawPattern(x, y, w, h, s) {
   fill(130);
   text("32-step pattern", x + 8, y + 8);
 
-  for (let p = 0; p < 3; p++) {
+  for (let p = 0; p < 4; p++) {
     const ly = oy + p * laneH;
     let mute = false;
     if (p === 0 && s.muteBd) mute = true;
     if (p === 1 && s.muteSd) mute = true;
     if (p === 2 && s.muteHh) mute = true;
+    if (p === 3 && s.muteFm) mute = true;
     fill(mute ? 90 : 200);
     textAlign(RIGHT, CENTER);
     text(PARTS[p], ox - 8, ly + laneH / 2);
