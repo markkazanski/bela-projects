@@ -108,6 +108,33 @@ int GridsEngine::hhGapSteps(int clockStep, const EngineInputs& in, int maxLook) 
 	return maxLook + 1;
 }
 
+int GridsEngine::hhOpenStep(int barStartStep, const EngineInputs& in) const {
+	if (in.muteHh || in.density[2] == 0)
+		return -1;
+	constexpr int kBarLen = 16;
+	int pick = -1;
+	int pickGap = -1;
+	int pickOff = 0;
+	int pickPos = -1;
+	for (int i = 0; i < kBarLen; ++i) {
+		const int cs = (barStartStep + i) % kSteps;
+		if (!wouldTrigger(2, cs, in))
+			continue;
+		const int gap = hhGapSteps(cs, in);
+		if (gap < 2)
+			continue;
+		const int off = (cs % 4 == 2) ? 1 : 0;
+		if (pick < 0 || off > pickOff || (off == pickOff && gap > pickGap)
+			|| (off == pickOff && gap == pickGap && i > pickPos)) {
+			pick = cs;
+			pickGap = gap;
+			pickOff = off;
+			pickPos = i;
+		}
+	}
+	return pick;
+}
+
 StepResult GridsEngine::tick(int clockStep, const EngineInputs& in) {
 	StepResult out = {};
 	const int playStep = audibleStep(clockStep);

@@ -63,7 +63,7 @@ A single failed read (`Remote I/O error`) used to disable the Trill library unti
 - [ ] Bar: all rate zones; light touch keeps BD; hard press kick drop
 - [ ] Square: latch, knob takeover, palm ignored
 - [ ] FM drum: **CV 3** → trigger on your FM voice
-- [ ] Hi-hat: **CV 7** → decay / open length (tune `hhDecayOpen` in [PepperPins.h](project/PepperPins.h))
+- [ ] Hi-hat: **CV 6** level on every hit (`hhAccentBase` / `hhAccentPeak`); **CV 7** → decay (one open hat per bar; tune `hhDecayOpen`)
 - [ ] No underruns; CPU stable
 
 Record any pin or polarity changes in the `PepperPins.h` comment block.
@@ -87,10 +87,12 @@ Record any pin or polarity changes in the `PepperPins.h` comment block.
 | CV out | Signal |
 |--------|--------|
 | 0 / 1 / 2 / 3 | BD / SD / HH / FM trigger (~5 ms) |
-| 4 / 5 / 6 | BD / SD / HH accent gate |
-| 7 | HH decay CV (gap-based open/closed; `hhDecayClosed` / `hhDecayOpen` in [PepperPins.h](project/PepperPins.h)) |
+| 4 / 5 / 6 | BD / SD / HH accent (BD/SD gate-style; HH is a level on every hit via `hhAccentBase` / `hhAccentPeak`) |
+| 7 | HH decay CV (~one open hat per 16-step bar; `hhDecayClosed` / `hhDecayOpen` in [PepperPins.h](project/PepperPins.h)) |
 
-**Hi-hat decay:** Before each HH hit the firmware looks ahead for the next HH step. Tight patterns → closed hat; sparse gaps → open hat. CV 7 updates ~1 ms before the trigger and holds until the next HH hit (a following closed hit chokes an open one). Patch **CV 7 → hat DECAY CV** on your module.
+**Hi-hat accent (CV 6):** Every HH trigger sends a voltage in a narrow range—unaccented steps use `hhAccentBase`, accented steps use `hhAccentPeak` (defaults 0.35 / 0.55). Bar fill hits interpolate between those. Set `hhAccentBase` to `0` if your module needs a gate-only accent input.
+
+**Hi-hat decay (CV 7):** At the start of each bar (steps 0 and 16) the firmware picks at most one open-hat step: an HH hit with room to ring (gap ≥ 2 to the next hat), preferring off-beat “and” positions. All other hats are closed. CV 7 updates ~1 ms before the trigger and holds until the next HH hit. Patch **CV 7 → hat DECAY CV**.
 
 FM pattern lane reads the Grids map at the mirrored position `(255−X, 255−Y)` using snare (SD) node data — related groove, opposite corner of the pad.
 

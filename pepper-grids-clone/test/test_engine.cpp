@@ -258,6 +258,51 @@ static void test_hh_gap_matches_ticks() {
 	}
 }
 
+static void test_hh_open_step() {
+	EngineInputs in = fullDensity();
+	in.chaos = 0;
+	in.mapX = 128;
+	in.mapY = 128;
+
+	GridsEngine mute;
+	mute.seed(1);
+	in.density[2] = 0;
+	mute.tick(0, in);
+	assert(mute.hhOpenStep(0, in) == -1);
+	in.density[2] = 255;
+
+	GridsEngine e;
+	e.seed(7);
+	e.tick(0, in);
+	const int open = e.hhOpenStep(0, in);
+	if (open >= 0) {
+		assert(open >= 0 && open < 16);
+		assert(e.hhGapSteps(open, in) >= 2);
+		GridsEngine e2;
+		e2.seed(7);
+		StepResult atOpen = {};
+		for (int s = 0; s <= open; ++s)
+			atOpen = e2.tick(s, in);
+		assert(atOpen.trig[2]);
+	}
+
+	GridsEngine a, b;
+	a.seed(8);
+	b.seed(8);
+	for (int s = 0; s < 3; ++s) {
+		a.tick(s, in);
+		b.tick(s, in);
+	}
+	a.hhOpenStep(0, in);
+	a.hhOpenStep(16, in);
+	const StepResult ra = a.tick(3, in);
+	const StepResult rb = b.tick(3, in);
+	for (int p = 0; p < kEngineVoices; ++p) {
+		assert(ra.trig[p] == rb.trig[p]);
+		assert(ra.level[p] == rb.level[p]);
+	}
+}
+
 static void test_y_affects_bd() {
 	GridsEngine e;
 	e.seed(1);
@@ -291,6 +336,7 @@ int main() {
 	test_fm_density_zero_silent();
 	test_fm_mirrored_level();
 	test_hh_gap_matches_ticks();
+	test_hh_open_step();
 	test_level_at_matches_tick();
 	std::printf("All tests passed.\n");
 	return 0;

@@ -7,7 +7,8 @@
 // Buttons: pins {15,14,13,12}; kButtonActiveHigh (default true) — use GRIDS_HW_TEST.
 // Trill cal constants: TrillInput.cpp namespace Cfg — use GRIDS_TRILL_DEBUG.
 // CV pulse level: gCalib.trigHigh in PepperPins.cpp (default 0.85).
-// HH decay CV range: hhDecayClosed / hhDecayOpen on CV 7.
+// HH decay CV: hhDecayClosed / hhDecayOpen on CV 7.
+// HH accent CV 6: hhAccentBase / hhAccentPeak on every hit (not accentLow/High).
 // Knob full-scale: Knobs.cpp kKnobMax[] (measured CW on +12 V).
 // LEDs: use digitalWrite (not digitalWriteOnce) so state persists across blocks.
 
@@ -40,6 +41,8 @@ struct Calib {
 	float trigHigh = 0.85f;
 	float accentLow = 0.15f;
 	float accentHigh = 0.85f;
+	float hhAccentBase = 0.35f;
+	float hhAccentPeak = 0.55f;
 	float hhDecayClosed = 0.f;
 	float hhDecayOpen = 0.85f;
 	int hhDecayLeadFrames = 22;

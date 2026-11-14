@@ -20,9 +20,11 @@ void TriggerOut::tryStartPulse(unsigned part) {
 	}
 	mPulseLeft[part] = adaptivePulseWidth();
 	mAccentHeld[part] = mPendingAccent[part];
-	const bool useAccentCv = part < PepperPins::kNumAccentParts;
-	if (useAccentCv)
+	if (part == PepperPins::kHh) {
+		mAccentOn[part] = true;
+	} else if (part < PepperPins::kNumAccentParts) {
 		mAccentOn[part] = mPendingHasAccent[part];
+	}
 	if (part == PepperPins::kHh && mPendingDecay[part] >= 0.f) {
 		mHhDecayLive = mPendingDecay[part];
 		mHhDecayPrimed = false;
@@ -90,9 +92,13 @@ void TriggerOut::write(BelaContext* ctx, unsigned aFrame) const {
 	}
 	for (unsigned p = 0; p < PepperPins::kNumAccentParts; ++p) {
 		if (mAccentOn[p]) {
-			const float a = PepperPins::gCalib.accentLow
-				+ (PepperPins::gCalib.accentHigh - PepperPins::gCalib.accentLow)
-					* mAccentHeld[p];
+			float a;
+			if (p == PepperPins::kHh)
+				a = mAccentHeld[p];
+			else
+				a = PepperPins::gCalib.accentLow
+					+ (PepperPins::gCalib.accentHigh - PepperPins::gCalib.accentLow)
+						* mAccentHeld[p];
 			analogWriteOnce(ctx, aFrame, PepperPins::kOutAccent[p], a);
 		} else {
 			analogWriteOnce(ctx, aFrame, PepperPins::kOutAccent[p], 0.f);

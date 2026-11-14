@@ -30,6 +30,7 @@ public:
 	void resetPattern();
 	StepResult tick(int clockStep, const EngineInputs& in);
 	int hhGapSteps(int clockStep, const EngineInputs& in, int maxLook = 4) const;
+	int hhOpenStep(int barStartStep, const EngineInputs& in) const;
 
 	void setFreeze(bool on, int loopStartStep);
 	bool frozen() const { return mFreeze; }

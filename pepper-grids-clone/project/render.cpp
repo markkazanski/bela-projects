@@ -27,20 +27,13 @@ static GuiView gGui;
 static int gLedFlash[PepperPins::kNumParts] = {};
 static bool gLeds[10] = {};
 static bool gLedDirty = false;
+static int gHhOpenStep = -1;
 
 static void setLed(int i, bool on) {
 	if (i >= 0 && i < 10 && gLeds[i] != on) {
 		gLeds[i] = on;
 		gLedDirty = true;
 	}
-}
-
-static float hhDecayFromGap(int gap) {
-	if (gap <= 1)
-		return 0.f;
-	if (gap >= 4)
-		return 1.f;
-	return (gap - 1) / 3.f;
 }
 
 static void applyLeds(BelaContext* ctx, unsigned dFrame) {
@@ -179,6 +172,7 @@ void render(BelaContext* context, void*) {
 			if (gKnobs.buttonRising(1)) {
 				gClock.requestReset();
 				gEngine.resetPattern();
+				gHhOpenStep = -1;
 			}
 			if (gKnobs.buttonRising(2))
 				gPattern.clearLatch();
@@ -212,24 +206,30 @@ void render(BelaContext* context, void*) {
 				in.muteHh = bar.touching;
 				in.muteFm = bar.touching;
 
+				if (step % 16 == 0)
+					gHhOpenStep = gEngine.hhOpenStep(step, in);
+
 				StepResult res = gEngine.tick(step, in);
 				const int swing = gClock.swingDelayFrames();
 				const float loose = gKnobs.feelLoose01();
-				int hhGap = 0;
-				if (res.trig[PepperPins::kHh])
-					hhGap = gEngine.hhGapSteps(step, in);
+				const float hhBase = PepperPins::gCalib.hhAccentBase;
+				const float hhPeak = PepperPins::gCalib.hhAccentPeak;
 				for (int p = 0; p < PepperPins::kNumParts; ++p) {
 					if (!res.trig[p])
 						continue;
-					const float acc = res.level[p] / 255.f;
+					float acc = res.level[p] / 255.f;
+					bool accOn = res.accent[p];
 					int delay = swing;
 					if (loose > 0.f)
 						delay += (int)(gLooseRng.nextU8() * loose
 							* gClock.stepPeriodFrames() * 0.12f / 255.f);
 					float decay = -1.f;
-					if (p == PepperPins::kHh)
-						decay = hhDecayFromGap(hhGap);
-					gTriggers.scheduleHit((unsigned)p, delay, acc, res.accent[p], decay);
+					if (p == PepperPins::kHh) {
+						acc = hhBase + (hhPeak - hhBase) * (res.accent[p] ? 1.f : 0.f);
+						accOn = true;
+						decay = (step == gHhOpenStep) ? 1.f : 0.f;
+					}
+					gTriggers.scheduleHit((unsigned)p, delay, acc, accOn, decay);
 					gLedFlash[p] = (p == PepperPins::kFm) ? 700 : 900;
 				}
 				gClock.afterTick();
