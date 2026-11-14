@@ -31,7 +31,21 @@ uint8_t GridsEngine::u8Mix(uint8_t a, uint8_t b, uint8_t balance) {
 	return (uint8_t)((int)a + (((int)b - (int)a) * (int)balance >> 8));
 }
 
-uint8_t GridsEngine::readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t y) const {
+int GridsEngine::playStep(int clockStep) const {
+	return audibleStep(clockStep);
+}
+
+uint8_t GridsEngine::perturbation(int part) const {
+	if (part < 0 || part >= kEngineParts)
+		return 0;
+	return mPerturbation[part];
+}
+
+uint8_t GridsEngine::levelAt(uint8_t step, uint8_t part, uint8_t x, uint8_t y) {
+	return readDrumMap(step, part, x, y);
+}
+
+uint8_t GridsEngine::readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t y) {
 	const uint8_t i = x >> 6;
 	const uint8_t j = y >> 6;
 	const uint8_t ni0 = Patterns::kDrumMap[i][j];

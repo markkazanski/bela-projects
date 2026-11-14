@@ -4,6 +4,8 @@
 
 #include "FillBar.h"
 #include "GridsEngine.h"
+#include "GuiSnapshot.h"
+#include "GuiView.h"
 #include "InternalClock.h"
 #include "Knobs.h"
 #include "PatternXY.h"
@@ -18,6 +20,7 @@ static TriggerOut gTriggers;
 static PatternXY gPattern;
 static TrillInput gTrill;
 static FillBar gFill;
+static GuiView gGui;
 
 static int gLedFlash[3] = {};
 static bool gLeds[10] = {};
@@ -117,6 +120,9 @@ bool setup(BelaContext* context, void*) {
 	gTriggers.setup(context->analogSampleRate);
 	gTrill.setup();
 	gEngine.seed(0x12345678u);
+#if GRIDS_GUI
+	gGui.setup(context);
+#endif
 	rt_printf("pepper-grids-clone ready\n");
 #endif
 	return true;
@@ -227,8 +233,28 @@ void render(BelaContext* context, void*) {
 		setLed(8, gTrill.fillActive());
 		setLed(9, gClock.running());
 
-		if (n == 0)
+		if (n == 0) {
+#if GRIDS_GUI
+			const BarSample bar = gTrill.bar();
+			float chaos01 = gKnobs.knob(5);
+			if (bar.touching)
+				chaos01 = std::min(1.f, chaos01 + bar.size * 0.35f);
+			uint8_t density[3];
+			for (int p = 0; p < 3; ++p)
+				density[p] = (uint8_t)(gKnobs.knob(2 + p) * 255.f + 0.5f);
+			uint8_t pert[3];
+			for (int p = 0; p < 3; ++p)
+				pert[p] = gEngine.perturbation(p);
+			const int clk = gClock.step();
+			GuiSnapshot::publish(gPattern.mapX(), gPattern.mapY(), density, pert, clk,
+				gEngine.playStep(clk), gEngine.freezeStart(), gClock.running(),
+				gEngine.frozen(), bar.touching, bar.kickDrop, gPattern.squareActive(),
+				gKnobs.tempoBpm(), (uint8_t)(gKnobs.knob(7) * 255.f + 0.5f),
+				(uint8_t)(chaos01 * 255.f + 0.5f), bar.touching && bar.kickDrop,
+				bar.touching, bar.touching);
+#endif
 			applyLeds(context, n);
+		}
 	}
 }
 

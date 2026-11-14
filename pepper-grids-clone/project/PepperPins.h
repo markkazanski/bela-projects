@@ -13,6 +13,9 @@
 #ifndef GRIDS_HW_TEST
 #define GRIDS_HW_TEST 0
 #endif
+#ifndef GRIDS_GUI
+#define GRIDS_GUI 1
+#endif
 // Digital clock jumpers on pins 9/11 are NOT used (internal clock only).
 // Trill Hub: I2C bus 1, Bar 0x20, Square 0x28.
 

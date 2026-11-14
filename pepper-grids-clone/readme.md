@@ -12,6 +12,10 @@ Independent Bela + Pepper project: 3-channel Mutable Instruments Grids-style seq
 
 Open `pepper-grids-clone` in the Bela IDE and run.
 
+## Pattern view (browser)
+
+While the project is running, open **http://bela.local/gui** (or use the **GUI** button in the Bela IDE). The view is read-only: a **5×5 map** with the current pattern position and a **3×32** grid (BD / SD / HH) showing step levels, density gating, accents, playhead, freeze loop, and Bar fill state. Set `GRIDS_GUI` to `0` in [PepperPins.h](project/PepperPins.h) to disable the GUI task.
+
 ## Hardware bring-up
 
 ### 1. I/O test mode

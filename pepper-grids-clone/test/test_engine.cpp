@@ -147,6 +147,37 @@ static void test_density_monotonic() {
 	}
 }
 
+static uint8_t expectedLevel(GridsEngine& e, int step, int part, const EngineInputs& in) {
+	uint8_t raw = GridsEngine::levelAt((uint8_t)step, (uint8_t)part, in.mapX, in.mapY);
+	const uint8_t pert = e.perturbation(part);
+	if (raw == 0)
+		return 0;
+	if (raw < 255 - pert)
+		return (uint8_t)(raw + pert);
+	return 255;
+}
+
+static void test_level_at_matches_tick() {
+	const int coords[] = {0, 64, 128, 192};
+	GridsEngine e;
+	e.seed(1);
+	EngineInputs in = fullDensity();
+	in.chaos = 0;
+	for (int xi : coords) {
+		for (int yi : coords) {
+			in.mapX = (uint8_t)xi;
+			in.mapY = (uint8_t)yi;
+			for (int s = 0; s < 32; ++s) {
+				StepResult r = e.tick(s, in);
+				for (int p = 0; p < 3; ++p) {
+					const uint8_t want = expectedLevel(e, s, p, in);
+					assert(r.level[p] == want);
+				}
+			}
+		}
+	}
+}
+
 static void test_y_affects_bd() {
 	GridsEngine e;
 	e.seed(1);
@@ -177,6 +208,7 @@ int main() {
 	test_blend_in_range();
 	test_density_monotonic();
 	test_y_affects_bd();
+	test_level_at_matches_tick();
 	std::printf("All tests passed.\n");
 	return 0;
 }

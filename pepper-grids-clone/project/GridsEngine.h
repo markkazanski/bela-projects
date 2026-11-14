@@ -29,6 +29,12 @@ public:
 
 	void setFreeze(bool on, int loopStartStep);
 	bool frozen() const { return mFreeze; }
+	int freezeStart() const { return mFreezeStart; }
+	int playStep(int clockStep) const;
+
+	uint8_t perturbation(int part) const;
+
+	static uint8_t levelAt(uint8_t step, uint8_t part, uint8_t x, uint8_t y);
 
 	void seed(uint32_t s) { mRng.seed(s); }
 
@@ -39,6 +45,6 @@ private:
 	Rng mRng;
 
 	int audibleStep(int clockStep) const;
-	uint8_t readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t y) const;
+	static uint8_t readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t y);
 	static uint8_t u8Mix(uint8_t a, uint8_t b, uint8_t balance);
 };
