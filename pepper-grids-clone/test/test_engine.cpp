@@ -1,3 +1,4 @@
+#include "DensityMacro.h"
 #include "FillRamp.h"
 #include "GridsEngine.h"
 #include "Patterns.h"
@@ -214,6 +215,22 @@ static void test_fm_mirrored_level() {
 	}
 }
 
+static void test_density_macro() {
+	assert(applyDensityMacro(128, 0.f) == 128);
+	assert(applyDensityMacro(0, 1.f) == 0);
+	assert(applyDensityMacro(0, -1.f) == 0);
+	assert(applyDensityMacro(200, 1.f) == 255);
+	assert(applyDensityMacro(200, -1.f) == 0);
+	const uint8_t d = 100;
+	uint8_t prev = applyDensityMacro(d, -1.f);
+	for (int i = -100; i <= 100; ++i) {
+		const float e = (float)i / 100.f;
+		const uint8_t got = applyDensityMacro(d, e);
+		assert(got >= prev);
+		prev = got;
+	}
+}
+
 static void test_fill_ramp() {
 	assert(fillRamp01(0.f) == 0.f);
 	assert(fillRamp01(kFillRampSteps) == 1.f);
@@ -348,6 +365,7 @@ int main() {
 	test_y_affects_bd();
 	test_fm_density_zero_silent();
 	test_fm_mirrored_level();
+	test_density_macro();
 	test_fill_ramp();
 	test_hh_gap_matches_ticks();
 	test_hh_open_step();

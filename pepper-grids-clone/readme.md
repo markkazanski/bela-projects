@@ -48,13 +48,27 @@ Set `GRIDS_TRILL_DEBUG` to `0` when done.
 
 **Square corners:** Grids nodes sit on the pad corners. Slide into a corner — the firmware keeps the last good axis while the sensor drops to one dimension (`mode=edgeX` or `edgeY` in debug). A cold tap that only registers on one axis is ignored to avoid ghosts. While dragging, each axis follows the reading nearest the previous position (same idea as the Bar), so a resting hand or phantom blob does not pull the map away.
 
-**Bar tracking:** With two simultaneous touches, the Bar follows the contact nearest the previous position (debug `fi=` index) instead of jumping to the largest blob.
+**Bar tracking:** With one finger held, the Bar follows the contact nearest the previous position (debug `fi=` index) instead of jumping to the largest blob. Two-finger pinch/spread enters density mode instead (see below).
 
-**Bar fills:** While the Bar is held, alternating snare and hi-hat hits fire at the zone rate. Snare loudness **crescendos** over about one bar (`kFillRampSteps` in [FillRamp.h](project/FillRamp.h)) with a slight end-weighted curve; light pressure adds a small boost on top. Fill hi-hats stay at `hhAccentBase` (no ramp) so the snare build stays forward. Releasing the Bar resets the ramp. Firm pressure still triggers kick drop (BD muted).
+**Bar density macro:** Two fingers on the Bar (minimum separation `kBarPinchMinSep` in [TrillInput.cpp](project/TrillInput.cpp)) enter **density mode**. Pinch (closer) thins all four voices evenly; spread (wider) makes them busier, relative to the finger distance at touchdown. Knob mix is preserved (silent voices stay silent). Lift both fingers to snap back to knob densities. One-finger holds still need ~25 ms (`kBarFillOnsetUs`) before fills engage so a quick second finger does not flicker a fill.
+
+**Bar fills:** While the Bar is held with one finger, alternating snare and hi-hat hits fire at the zone rate. Snare loudness **crescendos** over about one bar (`kFillRampSteps` in [FillRamp.h](project/FillRamp.h)) with a slight end-weighted curve; light pressure adds a small boost on top. Fill hi-hats stay at `hhAccentBase` (no ramp) so the snare build stays forward. Releasing the Bar resets the ramp. Firm pressure still triggers kick drop (BD muted).
 
 ### I2C errors
 
-A single failed read (`Remote I/O error`) used to disable the Trill library until restart. The aux task now clears the touch state, prints `Trill Bar read error, retrying`, and calls `setup()` again every 500 ms. On success you see `Trill Bar recovered` (confirmed on hardware). Keep fingers off the sensor briefly after recovery so baseline settles. If errors are frequent, shorten Hub cabling and keep it away from the Eurorack power bus.
+A single failed read (`errno 121`, Remote I/O error) usually means the sensor did not ACK: polling too fast while a scan is in progress, a stale I2C file descriptor, or wiring/noise. Square and Bar run in **separate aux tasks** at **12 ms** and **10 ms** (`kSquarePollUs` / `kBarPollUs` in [TrillInput.cpp](project/TrillInput.cpp)), matching Bela’s Trill examples instead of the old 5 ms shared loop.
+
+At **startup**, each sensor is initialised up to **5** times (`kSetupAttempts`, 300 ms apart). If one still fails, the project runs anyway: knobs 4/5 drive the map until the Square comes up; the aux task keeps retrying until `Trill … recovered` and `printDetails()` appear.
+
+On **read failure** while running, the firmware clears touch state, prints `Trill … read error, retrying`, closes the I2C fd, and calls `setup()` again (500 ms between attempts; after 3 failed attempts, 2 s until the device comes back). Keep fingers off the sensor briefly after recovery so baseline settles.
+
+On **firmware 2** (Bar/Square), `reset` / `setScanTrigger` “failed to write” lines during setup are normal library noise. Treat **`Unable to identify device`** as the real failure (sensor did not answer).
+
+If errors persist:
+
+- Run `i2cdetect -y -r 1` several times; `0x20` and `0x28` should always appear.
+- Shorten Hub cabling, reseat connectors, route away from the Eurorack ribbon/PSU.
+- Try raising `kSquarePollUs` to `20000` to rule out timing vs. hardware.
 
 ### 3. Normal run checklist
 
@@ -63,6 +77,7 @@ A single failed read (`Remote I/O error`) used to disable the Trill library unti
 - [ ] Knob 7: Feel (CCW half = swing; CW half = looseness + chaos)
 - [ ] Buttons: run/stop, reset, clear Square latch, hold freeze
 - [ ] Bar: all rate zones; light touch keeps BD; hard press kick drop
+- [ ] Bar: two-finger pinch thins, spread fattens; release restores knob densities
 - [ ] Square: latch, knob takeover, palm ignored
 - [ ] FM drum: **CV 3** → trigger on your FM voice
 - [ ] Hi-hat: **CV 6** level on every hit (`hhAccentBase` / `hhAccentPeak`); **CV 7** → decay (one open hat per bar; tune `hhDecayOpen`)

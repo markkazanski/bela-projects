@@ -11,6 +11,7 @@
 // HH accent CV 6: hhAccentBase / hhAccentPeak on every hit (not accentLow/High).
 // Knob full-scale: Knobs.cpp kKnobMax[] (measured CW on +12 V).
 // LEDs: use digitalWrite (not digitalWriteOnce) so state persists across blocks.
+// Audio out L: dead on this unit (no DC/AC at jack, R OK) — unused; FM trigger on CV 3.
 
 #ifndef GRIDS_HW_TEST
 #define GRIDS_HW_TEST 0

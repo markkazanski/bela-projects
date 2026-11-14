@@ -14,6 +14,8 @@ struct BarSample {
 	float size = 0.f;
 	int hitsPerStep = 1;
 	bool kickDrop = false;
+	bool densityMode = false;
+	float densityMacro = 0.f;
 };
 
 struct PadSample;
@@ -26,8 +28,4 @@ public:
 
 	bool anyTouch() const;
 	bool fillActive() const { return bar().touching; }
-
-private:
-	bool mBarOk = false;
-	bool mSquareOk = false;
 };

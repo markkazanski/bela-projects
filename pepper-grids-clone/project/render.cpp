@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
+#include "DensityMacro.h"
 #include "FillBar.h"
 #include "GridsEngine.h"
 #include "GuiSnapshot.h"
@@ -198,9 +199,13 @@ void render(BelaContext* context, void*) {
 				if (barChaos.touching)
 					chaos01 = std::min(1.f, chaos01 + barChaos.size * 0.35f);
 				in.chaos = (uint8_t)(chaos01 * 255.f + 0.5f);
-				for (int p = 0; p < PepperPins::kNumParts; ++p)
-					in.density[p] = gKnobs.partDensity(p);
 				const BarSample bar = gTrill.bar();
+				for (int p = 0; p < PepperPins::kNumParts; ++p) {
+					const uint8_t d = gKnobs.partDensity(p);
+					in.density[p] = bar.densityMode
+						? applyDensityMacro(d, bar.densityMacro)
+						: d;
+				}
 				in.muteBd = bar.touching && bar.kickDrop;
 				in.muteSd = bar.touching;
 				in.muteHh = bar.touching;
@@ -263,8 +268,12 @@ void render(BelaContext* context, void*) {
 			if (bar.touching)
 				chaos01 = std::min(1.f, chaos01 + bar.size * 0.35f);
 			uint8_t density[kEngineVoices];
-			for (int p = 0; p < kEngineVoices; ++p)
-				density[p] = gKnobs.partDensity(p);
+			for (int p = 0; p < kEngineVoices; ++p) {
+				const uint8_t d = gKnobs.partDensity(p);
+				density[p] = bar.densityMode
+					? applyDensityMacro(d, bar.densityMacro)
+					: d;
+			}
 			uint8_t pert[kEngineVoices];
 			for (int p = 0; p < kEngineVoices; ++p)
 				pert[p] = gEngine.perturbation(p);
