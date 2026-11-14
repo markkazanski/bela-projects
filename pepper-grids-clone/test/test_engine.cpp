@@ -213,6 +213,51 @@ static void test_fm_mirrored_level() {
 	}
 }
 
+static void test_hh_gap_matches_ticks() {
+	EngineInputs in = fullDensity();
+	in.chaos = 0;
+	in.mapX = 128;
+	in.mapY = 128;
+	bool hits[32] = {};
+	GridsEngine ref;
+	ref.seed(4);
+	for (int s = 0; s < 32; ++s)
+		hits[s] = ref.tick(s, in).trig[2];
+
+	GridsEngine e;
+	e.seed(4);
+	for (int s = 0; s < 32; ++s) {
+		int want = 5;
+		for (int off = 1; off <= 4; ++off) {
+			const int idx = (s + off) % 32;
+			if (hits[idx]) {
+				want = off;
+				break;
+			}
+		}
+		const int got = e.hhGapSteps(s, in);
+		StepResult r = e.tick(s, in);
+		if (r.trig[2])
+			assert(got == want);
+	}
+
+	GridsEngine a, b;
+	a.seed(5);
+	b.seed(5);
+	for (int s = 0; s < 5; ++s) {
+		a.tick(s, in);
+		b.tick(s, in);
+	}
+	a.hhGapSteps(5, in);
+	a.hhGapSteps(5, in);
+	const StepResult ra = a.tick(5, in);
+	const StepResult rb = b.tick(5, in);
+	for (int p = 0; p < kEngineVoices; ++p) {
+		assert(ra.trig[p] == rb.trig[p]);
+		assert(ra.level[p] == rb.level[p]);
+	}
+}
+
 static void test_y_affects_bd() {
 	GridsEngine e;
 	e.seed(1);
@@ -245,6 +290,7 @@ int main() {
 	test_y_affects_bd();
 	test_fm_density_zero_silent();
 	test_fm_mirrored_level();
+	test_hh_gap_matches_ticks();
 	test_level_at_matches_tick();
 	std::printf("All tests passed.\n");
 	return 0;

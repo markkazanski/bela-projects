@@ -73,6 +73,41 @@ uint8_t GridsEngine::readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t 
 	return u8Mix(u8Mix(xa, xb, bx), u8Mix(xc, xd, bx), by);
 }
 
+bool GridsEngine::wouldTrigger(int part, int clockStep, const EngineInputs& in) const {
+	if (part < 0 || part >= kEngineVoices)
+		return false;
+	if ((part == 0 && in.muteBd) || (part == 1 && in.muteSd) || (part == 2 && in.muteHh)
+		|| (part == kFmVoice && in.muteFm))
+		return false;
+	if (in.density[part] == 0)
+		return false;
+	const int playStep = audibleStep(clockStep);
+	uint8_t level;
+	if (part == kFmVoice)
+		level = fmLevelAt((uint8_t)playStep, in.mapX, in.mapY);
+	else
+		level = readDrumMap((uint8_t)playStep, (uint8_t)part, in.mapX, in.mapY);
+	if (level == 0)
+		return false;
+	if (level < 255 - mPerturbation[part])
+		level = (uint8_t)(level + mPerturbation[part]);
+	else
+		level = 255;
+	const uint8_t threshold = (uint8_t)~in.density[part];
+	return level > threshold;
+}
+
+int GridsEngine::hhGapSteps(int clockStep, const EngineInputs& in, int maxLook) const {
+	for (int off = 1; off <= maxLook; ++off) {
+		int cs = (clockStep + off) % kSteps;
+		if (cs < 0)
+			cs += kSteps;
+		if (wouldTrigger(2, cs, in))
+			return off;
+	}
+	return maxLook + 1;
+}
+
 StepResult GridsEngine::tick(int clockStep, const EngineInputs& in) {
 	StepResult out = {};
 	const int playStep = audibleStep(clockStep);

@@ -37,7 +37,7 @@ void FillBar::process(float subPhase, TriggerOut& out, int* ledFlash) {
 			ledFlash[1] = 800;
 	} else {
 		const float acc = std::min(1.f, 0.3f + 0.7f * mIntensity);
-		out.fireNow(PepperPins::kHh, acc, true);
+		out.fireNow(PepperPins::kHh, acc, true, 0.f);
 		if (ledFlash)
 			ledFlash[2] = 600;
 	}

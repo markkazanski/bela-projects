@@ -29,6 +29,7 @@ class GridsEngine {
 public:
 	void resetPattern();
 	StepResult tick(int clockStep, const EngineInputs& in);
+	int hhGapSteps(int clockStep, const EngineInputs& in, int maxLook = 4) const;
 
 	void setFreeze(bool on, int loopStartStep);
 	bool frozen() const { return mFreeze; }
@@ -49,6 +50,7 @@ private:
 	Rng mRng;
 
 	int audibleStep(int clockStep) const;
+	bool wouldTrigger(int part, int clockStep, const EngineInputs& in) const;
 	static uint8_t readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t y);
 	static uint8_t u8Mix(uint8_t a, uint8_t b, uint8_t balance);
 };
