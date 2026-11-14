@@ -28,7 +28,7 @@ int GridsEngine::audibleStep(int clockStep) const {
 }
 
 uint8_t GridsEngine::u8Mix(uint8_t a, uint8_t b, uint8_t balance) {
-	return (uint8_t)((a + (((int)b - (int)a) * balance)) >> 8);
+	return (uint8_t)((int)a + (((int)b - (int)a) * (int)balance >> 8));
 }
 
 uint8_t GridsEngine::readDrumMap(uint8_t step, uint8_t part, uint8_t x, uint8_t y) const {
